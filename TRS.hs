@@ -43,8 +43,7 @@ data HOLSystem = HOLSystem
 
 instance Show HOLSystem where
     show (HOLSystem sorts functions rules) = 
-      let allStrings = (map show sorts) ++ (map show functions) ++ (map show rules)
-      in concatMap ("\n" ++) allStrings
+      unlines $ (map show sorts) ++ (map show functions) ++ (map show rules)
 
 type Order = Int
 type Well_Formed = Bool 
@@ -181,6 +180,7 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
 
         (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
         let freeVars = concat varss
+        traceM $ "free variable with order: " ++ show newVarOrder
         let baseFlags = Flags {well_formed=True, left_linear=True, second_order=newVarOrder <= 2}
         let flags = foldr (combineFlags) baseFlags flagss
         Right $ (newVar : freeVars, flags)
@@ -196,6 +196,7 @@ typeCheckWithFreeVariables system vars (TermLambda newVars body) t@(Type targs t
         checkVars "lambda function variable" system (vars ++ newVars)
 
         let maxOrder = maximum $ map (typeOrder . varType) newVars
+        traceM $ "lambda term with order: " ++ show maxOrder
         let baseFlags = Flags {well_formed=True, left_linear=True, second_order=maxOrder <= 1}
         -- expected type of the body
         let bodyType = Type (drop (length newVars) targs) tid
@@ -225,10 +226,10 @@ checkType system (Type [] ret) =
     then Right 1
     else Left ("sort '" ++ show ret ++ "' is not defined")
 
-checkType system (Type (arg:args) ret) = do
-    order <- checkType system arg
-    order' <- checkType system (Type args ret)
-    return $ (max order order') + 1
+checkType system (Type args ret) = do
+    checkType system (Type [] ret)
+    orders <- mapM (checkType system) args
+    return $ 1 + maximum orders
 
 typeOrder :: Type -> Order
 typeOrder (Type [] ret) = 1
