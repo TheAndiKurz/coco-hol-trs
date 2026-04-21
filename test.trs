@@ -1,0 +1,18 @@
+(format higher-order)
+
+(sort Nat)
+(sort Tree)
+(fun + (-> Nat Nat Nat))
+(fun s (-> Nat Nat))
+(fun 0 Nat)
+(fun node (-> Nat Tree Tree Tree))
+(fun leaf (-> Nat Tree))
+(fun sum (-> Tree Nat))
+(fun apply (-> (-> Nat Nat) Nat Nat))
+(rule (sum (leaf x)) x)
+(rule (sum (node x yt zt)) (+ x (+ (sum yt) (sum zt))))
+(rule (+ x 0) x)
+(rule (+ x (s y)) (s (+ x y)))
+(rule (node x yt zt) (node x zt yt))
+; (rule (apply s x) (s x)) ; not in eta normal form
+; (rule (apply (lambda ((y Nat)) (s y)) x) (s x))
