@@ -2,6 +2,7 @@
 
 (sort Nat)
 (sort Tree)
+(fun * (-> Nat Nat Nat))
 (fun + (-> Nat Nat Nat))
 (fun s (-> Nat Nat))
 (fun 0 Nat)
@@ -14,5 +15,6 @@
 (rule (+ x 0) x)
 (rule (+ x (s y)) (s (+ x y)))
 (rule (node x yt zt) (node x zt yt))
+; (rule (+ n n) (* (s (s 0)) n)) ; left linear becomes false
 ; (rule (apply s x) (s x)) ; not in eta normal form
 ; (rule (apply (lambda ((y Nat)) (s y)) x) (s x))

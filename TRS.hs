@@ -1,20 +1,48 @@
 module TRS where
 import Data.List (nub, sort)
 import Data.Foldable (find)
-import Control.Monad (zipWithM)
+import Control.Monad (zipWithM, foldM)
 import Debug.Trace (traceM)
+import Data.Either (isRight)
 
-newtype Id = Id String deriving (Show, Eq, Ord)
+newtype Id = Id String deriving (Eq, Ord)
 
 data Sort     = Sort Id deriving (Show, Eq)
-data Type     = Type [Type] Id deriving (Show, Eq)
-data Var      = Var Id Type deriving Show
-data Term     = Term Id [Term] | TermLambda [Var] Term deriving Show
+data Type     = Type [Type] Id deriving Eq
+data Var      = Var Id Type
+data Term     = Term Id [Term] | TermLambda [Var] Term
+
+instance Show Id where
+    show (Id id) = id
+
+instance Show Type where
+  show (Type [] id) = show id
+  show (Type args id) = "(-> " ++ concatMap ((++ " ") . show) args ++ " " ++ show id ++ ")"
+
+instance Show Var where
+  show (Var id typ) = "(" ++ show id ++ " " ++ show typ ++ ")"
+
+instance Show Term where
+  show (Term id []) = show id
+  show (Term id args) = "(" ++ show id ++ concatMap ((" " ++) . show) args ++ ")"
+  show (TermLambda vars t) = "(lambda ( " ++ concatMap ((++ " ") . show) vars ++ ") " ++ show t ++ ")"
+
 
 data HOLSystem = HOLSystem
   { sorts     :: [Sort]
   , functions :: [Var]
   , rules     :: [(Term, Term)]
+  } deriving Show
+
+type Order = Int
+type Well_Formed = Bool 
+type Second_Order = Bool
+type Left_Linear = Bool
+
+data Flags = Flags 
+  { well_formed :: Well_Formed
+  , left_linear :: Left_Linear
+  , second_order :: Second_Order
   } deriving Show
 
 instance Eq Var where
@@ -23,6 +51,10 @@ instance Eq Var where
 instance Ord Var where
     compare (Var id1 _) (Var id2 _) = compare id1 id2
 
+
+combineFlags :: Flags -> Flags -> Flags
+combineFlags (Flags wf1 ll1 so1) (Flags wf2 ll2 so2) = Flags (wf1 && wf2) (ll1 && ll2) (so1 && so2)
+ 
 sortId :: Sort -> Id
 sortId (Sort id) = id
 
@@ -32,53 +64,64 @@ varId (Var id _) = id
 varType :: Var -> Type
 varType (Var _ t) = t
 
-checkSystem :: HOLSystem -> Either String ()
+checkSystem :: HOLSystem -> Either String Flags
 checkSystem system = do
-    checkSorts system
-    checkFunctions system
-    checkRules system
-    Right ()
+    flags <- checkSorts system
+    flags' <- checkFunctions system
+    flags'' <- checkRules system
+    Right $ combineFlags flags $ combineFlags flags' flags''
 
-checkSorts :: HOLSystem -> Either String ()
+checkSorts :: HOLSystem -> Either String Flags
 -- TODO: show name of duplicate sorts
 checkSorts system
     | length (sorts system) /= length (nub $ sorts system) =
         Left ("every sort has to have a unique name")
-    | otherwise = Right ()
+    | otherwise = Right $ Flags {well_formed=True, left_linear=True, second_order=True}
 
-checkFunctions :: HOLSystem -> Either String ()
-checkFunctions system = checkVars "function" system (functions system)
+checkFunctions :: HOLSystem -> Either String Flags
+checkFunctions system = do
+    order <- checkVars "function" system (functions system)
+    return $ Flags True True (order <= 3)
 
-checkRules :: HOLSystem -> Either String ()
-checkRules system = mapM_ (checkRule system) $ rules system
+checkRules :: HOLSystem -> Either String Flags
+checkRules system = do 
+  flags <- mapM (checkRule system) $ rules system
+  return $ foldr combineFlags (Flags True True True) flags
 
-checkRule :: HOLSystem -> (Term, Term) -> Either String ()
+checkRule :: HOLSystem -> (Term, Term) -> Either String Flags
 checkRule _ rule@((TermLambda _ _), _) = Left $
-    "rule " ++ show rule ++ " has a lambda term in left-hand side"
+    "rule '" ++ show rule ++ "' has a lambda term in left-hand side"
 
 checkRule system (ruleLeft, ruleRight) = do
     typ@(Type args _) <- getTermType system (functions system) ruleLeft
     traceM $ "type: " ++ show typ
-    freeVarsL <- typeCheckWithFreeVariables system (functions system) ruleLeft typ
-    freeVarsL <- checkFreeVars freeVarsL
-    freeVarsR <- typeCheckWithFreeVariables system (functions system ++ freeVarsL) ruleRight typ
+    (freeVarsL, flags) <- typeCheckWithFreeVariables system (functions system) ruleLeft typ
+    (freeVarsL, flags') <- checkFreeVars freeVarsL
+    (freeVarsR, flags'') <- typeCheckWithFreeVariables system (functions system ++ freeVarsL) ruleRight typ
     if length freeVarsR == 0
-    then return ()
-    else Left $ "rule " ++ show (ruleLeft, ruleRight)
-        ++ " has free variables in right hand side that do not appear in left-hand side: "
+    then return $ combineFlags flags $ combineFlags flags' flags''
+    else Left $ "rule '" ++ show (ruleLeft, ruleRight)
+        ++ "' has free variables in right hand side that do not appear in left-hand side: "
         ++ show freeVarsR
 
-checkFreeVars :: [Var] -> Either String [Var]
-checkFreeVars vars = check $ sort vars
+checkFreeVars :: [Var] -> Either String ([Var], Flags)
+checkFreeVars vars = do
+  (vars, left_linear, order) <- check $ sort vars
+  return $ (vars, Flags {well_formed=True, left_linear=left_linear, second_order=order <= 2})
     where
-        check :: [Var] -> Either String [Var]
-        check (v1 : v2 : vs)
+        check :: [Var] -> Either String ([Var], Left_Linear, Order)
+        check (v1@(Var _ typ) : v2 : vs)
             | varId v1 == varId v2 && varType v1 /= varType v2 = Left $
                 "free variable '" ++ show v1 ++ "' occures twice and has different types: "
                 ++ show (varType v1) ++ " and " ++ show (varType v2)
-            | varId v1 == varId v2 = check (v2 : vs)
-            | otherwise = (:) v1 <$> check (v2 : vs)
-        check vs = Right vs
+            | varId v1 == varId v2 = do 
+                (vs, _, order) <- check (v2 : vs)
+                return $ (vs, False, max order $ typeOrder typ)
+            | otherwise = do 
+                (vs, ll, order) <- check (v2 : vs)
+                return $ (v1 : vs, ll, max order $ typeOrder typ)
+        check [v@(Var _ typ)] = Right ([v], True, typeOrder typ)
+        check [] = Right ([], True, 1)
 
 getTermType :: HOLSystem -> [Var] -> Term -> Either String Type
 getTermType system vars term@(Term id args) = case findVar vars id of
@@ -104,15 +147,15 @@ getTermTypeFreeVariableError term = Left $
 
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
-typeCheckWithFreeVariables :: HOLSystem -> [Var] -> Term -> Type -> Either String [Var]
+typeCheckWithFreeVariables :: HOLSystem -> [Var] -> Term -> Type -> Either String ([Var], Flags)
 typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid) = case findVar vars fid of
     -- function application type checking
     Just (Var _ ft@(Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
         then Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
         else do
-            freeVars <- concat <$> zipWithM (typeCheckWithFreeVariables system vars) args fargs
-            Right $ freeVars
+            (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args fargs
+            Right $ (concat varss, foldr (combineFlags) (Flags True True True) flags)
 
     Just (Var _ ft@(Type fargs ftid)) | length fargs == (length args + length targs) ->
         Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
@@ -121,8 +164,15 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
         termTypes <- mapM (getTermType system vars) args
-        freeVars <- concat <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
-        Right $ (Var fid $ Type (termTypes ++ targs) tid) : freeVars
+        let newVarType = Type (termTypes ++ targs) tid
+        let newVarOrder = typeOrder newVarType 
+        let newVar = Var fid newVarType
+
+        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
+        let freeVars = concat varss
+        let baseFlags = Flags {well_formed=True, left_linear=True, second_order=newVarOrder <= 2}
+        let flags = foldr (combineFlags) baseFlags flagss
+        Right $ (newVar : freeVars, flags)
 
     _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
 
@@ -133,18 +183,22 @@ typeCheckWithFreeVariables system vars (TermLambda newVars body) t@(Type targs t
     | otherwise = do
         -- no shadowing and no duplicates
         checkVars "lambda function variable" system (vars ++ newVars)
+
+        let maxOrder = maximum $ map (typeOrder . varType) newVars
+        let baseFlags = Flags {well_formed=True, left_linear=True, second_order=maxOrder <= 1}
         -- expected type of the body
         let bodyType = Type (drop (length newVars) targs) tid
         if sameTypes (map varType newVars) (take (length newVars) targs)
-        then do typeCheckWithFreeVariables system (vars ++ newVars) body bodyType
+        then do 
+            (vars, flags)<- typeCheckWithFreeVariables system (vars ++ newVars) body bodyType
+            return $ (vars, combineFlags flags baseFlags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType newVars))
 
-
-checkVars :: String -> HOLSystem -> [Var] -> Either String ()
+checkVars :: String -> HOLSystem -> [Var] -> Either String Order
 -- TODO: show name of duplicate vars
 checkVars desc system vars
     | length vars /= length (nub vars) = Left ("every "++ desc ++" has to have a unique name and cannot be shadowed")
-    | otherwise = mapM_ (checkType system . varType) $ functions system
+    | otherwise = foldM (\order var -> (max order) <$> checkType system (varType var)) 1 $ functions system
 
 sameTypes :: [Type] -> [Type] -> Bool
 sameTypes ts1 ts2
@@ -154,12 +208,17 @@ sameTypes ts1 ts2
 findVar :: [Var] -> Id -> Maybe Var
 findVar vars id = find ((==) id . varId) $ vars
 
-checkType :: HOLSystem -> Type -> Either String ()
+checkType :: HOLSystem -> Type -> Either String Order
 checkType system (Type [] ret) =
     if ret `elem` (map sortId $ sorts system)
-    then Right ()
+    then Right 1
     else Left ("sort '" ++ show ret ++ "' is not defined")
 
 checkType system (Type (arg:args) ret) = do
-    checkType system arg
-    checkType system (Type args ret)
+    order <- checkType system arg
+    order' <- checkType system (Type args ret)
+    return $ (max order order') + 1
+
+typeOrder :: Type -> Order
+typeOrder (Type [] ret) = 1
+typeOrder (Type types ret) = 1 + (maximum $ map typeOrder types)
