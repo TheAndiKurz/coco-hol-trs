@@ -7,17 +7,22 @@ import Data.Either (isRight)
 
 newtype Id = Id String deriving (Eq, Ord)
 
-data Sort     = Sort Id deriving (Show, Eq)
+data Sort     = Sort Id deriving Eq
 data Type     = Type [Type] Id deriving Eq
 data Var      = Var Id Type
 data Term     = Term Id [Term] | TermLambda [Var] Term
 
+data Rule = Rule Term Term
+
 instance Show Id where
     show (Id id) = id
 
+instance Show Sort where
+    show (Sort id) = "(sort " ++ show id ++ ")"
+
 instance Show Type where
   show (Type [] id) = show id
-  show (Type args id) = "(-> " ++ concatMap ((++ " ") . show) args ++ " " ++ show id ++ ")"
+  show (Type args id) = "(->" ++ concatMap ((" " ++) . show) args ++ " " ++ show id ++ ")"
 
 instance Show Var where
   show (Var id typ) = "(" ++ show id ++ " " ++ show typ ++ ")"
@@ -27,12 +32,19 @@ instance Show Term where
   show (Term id args) = "(" ++ show id ++ concatMap ((" " ++) . show) args ++ ")"
   show (TermLambda vars t) = "(lambda ( " ++ concatMap ((++ " ") . show) vars ++ ") " ++ show t ++ ")"
 
+instance Show Rule where
+  show (Rule t1 t2) = "(rule " ++ show t1 ++ " " ++ show t2 ++ ")"
 
 data HOLSystem = HOLSystem
   { sorts     :: [Sort]
   , functions :: [Var]
-  , rules     :: [(Term, Term)]
-  } deriving Show
+  , rules     :: [Rule]
+  }
+
+instance Show HOLSystem where
+    show (HOLSystem sorts functions rules) = 
+      let allStrings = (map show sorts) ++ (map show functions) ++ (map show rules)
+      in concatMap ("\n" ++) allStrings
 
 type Order = Int
 type Well_Formed = Bool 
@@ -88,13 +100,12 @@ checkRules system = do
   flags <- mapM (checkRule system) $ rules system
   return $ foldr combineFlags (Flags True True True) flags
 
-checkRule :: HOLSystem -> (Term, Term) -> Either String Flags
-checkRule _ rule@((TermLambda _ _), _) = Left $
+checkRule :: HOLSystem -> Rule -> Either String Flags
+checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
     "rule '" ++ show rule ++ "' has a lambda term in left-hand side"
 
-checkRule system (ruleLeft, ruleRight) = do
+checkRule system (Rule ruleLeft ruleRight) = do
     typ@(Type args _) <- getTermType system (functions system) ruleLeft
-    traceM $ "type: " ++ show typ
     (freeVarsL, flags) <- typeCheckWithFreeVariables system (functions system) ruleLeft typ
     (freeVarsL, flags') <- checkFreeVars freeVarsL
     (freeVarsR, flags'') <- typeCheckWithFreeVariables system (functions system ++ freeVarsL) ruleRight typ

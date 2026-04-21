@@ -171,8 +171,8 @@ termP = atomP <|> applicationP <|> lambdaP
 
         atomP = Term <$> idP <*> pure []
 
-ruleP :: Parser (Term, Term)
-ruleP = parensP $ stringP "rule" *> void *> ((,) <$> termP <*> termP)
+ruleP :: Parser Rule
+ruleP = parensP $ stringP "rule" *> void *> (Rule <$> termP <*> termP)
 
 
 holSystemP :: Parser HOLSystem
