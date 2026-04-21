@@ -10,11 +10,13 @@
 (fun leaf (-> Nat Tree))
 (fun sum (-> Tree Nat))
 (fun apply (-> (-> Nat Nat) Nat Nat))
+(fun higher_apply (-> (-> (-> Nat Nat) Nat) Nat)) ; order(higher_apply) = 4 => second_order = False
 (rule (sum (leaf x)) x)
 (rule (sum (node x yt zt)) (+ x (+ (sum yt) (sum zt))))
 (rule (+ x 0) x)
 (rule (+ x (s y)) (s (+ x y)))
 (rule (node x yt zt) (node x zt yt))
+; (rule (higher_apply F) (F (lambda ((x Nat)) (s x)))) ; order(F) = 3 => second_order = false
 ; (rule (+ n n) (* (s (s 0)) n)) ; left linear becomes false
 ; (rule (apply s x) (s x)) ; not in eta normal form
 ; (rule (apply (lambda ((y Nat)) (s y)) x) (s x))

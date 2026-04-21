@@ -227,7 +227,6 @@ checkType system (Type [] ret) =
     else Left ("sort '" ++ show ret ++ "' is not defined")
 
 checkType system (Type args ret) = do
-    checkType system (Type [] ret)
     orders <- mapM (checkType system) args
     return $ 1 + maximum orders
 
