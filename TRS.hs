@@ -171,6 +171,8 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
         Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
 
     -- free variable type inference
+    -- NOTE: remove this case for well-behaved?
+    Nothing | length targs /= 0 -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
         termTypes <- mapM (getTermType system vars) args
