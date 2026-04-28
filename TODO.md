@@ -9,6 +9,7 @@
 
 ## When time allows
 
+- [ ] Checking Error, with location of the input to an adequate Error with position 
 - [ ] Show why Flag is False
 
 # Questions
