@@ -175,13 +175,15 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
     -- function application type checking
     Just (Var _ ft@(Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
-        then Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
+        then Left $ "term '" ++ show term ++ "' does not have type " ++ show typ
         else do
             (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args fargs
             Right $ (concat varss, foldr (combineFlags) (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags)
 
     Just (Var _ ft@(Type fargs ftid)) | length fargs == (length args + length targs) ->
-        Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
+        if ft == typ then
+            Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
+        else Left $ "term '" ++ show term ++ "' has type " ++ show ft ++ " which is not the expected type " ++ show typ ++ " and it is not in eta normal form."
 
     -- free variable type inference
     -- NOTE: remove this case for well-behaved?

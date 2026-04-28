@@ -22,6 +22,9 @@
 ; (rule (higher_apply F) (F (lambda ((x Nat)) (s x)))) ; order(F) = 3 => second_order = false
 ; (rule (+ n n) (* (s (s 0)) n)) ; left linear becomes false
 ; (rule (apply S x) (S x)) ; free variable 'S' not in eta normal form
-(rule (apply (lambda ((y Nat)) (S y)) x) (S x)) ; same as the rule above just with eta long form
+
+; (rule (apply (lambda ((y Nat)) (S y)) x) (S x)) ; same as the rule above just with eta long form
+
+; (rule (apply sum x) (sum x)) ; type not correct and not in eta normal form
 ; (rule (apply s x) (s x)) ; not in eta normal form
 ; (rule (apply (lambda ((y Nat)) (s y)) x) (s x))
