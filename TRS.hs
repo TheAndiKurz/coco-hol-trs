@@ -2,7 +2,6 @@ module TRS where
 import Data.List (nub, sort)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
-import Debug.Trace (traceM)
 import Data.Either (isRight)
 
 newtype Id = Id String deriving (Eq, Ord)
@@ -77,12 +76,15 @@ varId (Var id _) = id
 varType :: Var -> Type
 varType (Var _ t) = t
 
-checkSystem :: HOLSystem -> Either String Flags
+
+checkSystem :: HOLSystem -> Either String (Flags, []Var)
 checkSystem system = do
     flags <- checkSorts system
     flags' <- checkFunctions system
     flags'' <- checkRules system
-    Right $ combineFlags flags $ combineFlags flags' flags''
+    Right ( combineFlags flags $ combineFlags flags' flags''
+          , filter (not . \var -> any (varUsedInRule var) (rules system)) (functions system)
+          )
 
 checkSorts :: HOLSystem -> Either String Flags
 -- TODO: show name of duplicate sorts
@@ -135,6 +137,15 @@ checkFreeVars vars = do
         check [v@(Var _ typ)] = Right ([v], True, typeOrder typ)
         check [] = Right ([], True, 1)
 
+varUsedInRule :: Var -> Rule -> Bool
+varUsedInRule var (Rule t1 t2) = varUsedInTerm var t1 || varUsedInTerm var t2
+
+varUsedInTerm :: Var -> Term -> Bool
+varUsedInTerm var (TermLambda _ body) = varUsedInTerm var body
+varUsedInTerm var@(Var vid _) (Term tid args) 
+    | vid == tid = True
+    | otherwise = any (varUsedInTerm var) args
+
 getTermType :: HOLSystem -> [Var] -> Term -> Either String Type
 getTermType system vars term@(Term id args) = case findVar vars id of
     Just (Var _ (Type fargs _)) | length fargs /= length args ->
@@ -184,7 +195,6 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
 
         (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
         let freeVars = concat varss
-        traceM $ "free variable with order: " ++ show newVarOrder
         let baseFlags = Flags {left_linear=True, second_order=newVarOrder <= 2, deterministic_pattern=True, pattern=True}
         let flags = foldr (combineFlags) baseFlags flagss
         Right $ (newVar : freeVars, flags)
@@ -200,7 +210,6 @@ typeCheckWithFreeVariables system vars (TermLambda newVars body) t@(Type targs t
         checkVars "lambda function variable" system (vars ++ newVars)
 
         let maxOrder = maximum $ map (typeOrder . varType) newVars
-        traceM $ "lambda term with order: " ++ show maxOrder
         let baseFlags = Flags {left_linear=True, second_order=maxOrder <= 1, deterministic_pattern=True, pattern=True}
         -- expected type of the body
         let bodyType = Type (drop (length newVars) targs) tid
