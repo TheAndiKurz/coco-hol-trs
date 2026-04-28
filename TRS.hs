@@ -46,14 +46,16 @@ instance Show HOLSystem where
       unlines $ (map show sorts) ++ (map show functions) ++ (map show rules)
 
 type Order = Int
-type Well_Formed = Bool 
 type Second_Order = Bool
 type Left_Linear = Bool
+type Pattern = Bool
+type Deterministic_Pattern = Bool
 
 data Flags = Flags 
-  { well_formed :: Well_Formed
-  , left_linear :: Left_Linear
+  { left_linear :: Left_Linear
   , second_order :: Second_Order
+  , deterministic_pattern :: Deterministic_Pattern
+  , pattern :: Pattern
   } deriving Show
 
 instance Eq Var where
@@ -64,7 +66,7 @@ instance Ord Var where
 
 
 combineFlags :: Flags -> Flags -> Flags
-combineFlags (Flags wf1 ll1 so1) (Flags wf2 ll2 so2) = Flags (wf1 && wf2) (ll1 && ll2) (so1 && so2)
+combineFlags (Flags ll1 so1 dhs1 prs1) (Flags ll2 so2 dhs2 prs2) = Flags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
  
 sortId :: Sort -> Id
 sortId (Sort id) = id
@@ -87,17 +89,17 @@ checkSorts :: HOLSystem -> Either String Flags
 checkSorts system
     | length (sorts system) /= length (nub $ sorts system) =
         Left ("every sort has to have a unique name")
-    | otherwise = Right $ Flags {well_formed=True, left_linear=True, second_order=True}
+    | otherwise = Right $ Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}
 
 checkFunctions :: HOLSystem -> Either String Flags
 checkFunctions system = do
     order <- checkVars "function" system (functions system)
-    return $ Flags True True (order <= 3)
+    return $ Flags {left_linear=True, second_order=(order <= 3), deterministic_pattern=True, pattern=True}
 
 checkRules :: HOLSystem -> Either String Flags
 checkRules system = do 
   flags <- mapM (checkRule system) $ rules system
-  return $ foldr combineFlags (Flags True True True) flags
+  return $ foldr combineFlags (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags
 
 checkRule :: HOLSystem -> Rule -> Either String Flags
 checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
@@ -117,7 +119,7 @@ checkRule system (Rule ruleLeft ruleRight) = do
 checkFreeVars :: [Var] -> Either String ([Var], Flags)
 checkFreeVars vars = do
   (vars, left_linear, order) <- check $ sort vars
-  return $ (vars, Flags {well_formed=True, left_linear=left_linear, second_order=order <= 2})
+  return $ (vars, Flags {left_linear=left_linear, second_order=order <= 2, deterministic_pattern=True, pattern=True})
     where
         check :: [Var] -> Either String ([Var], Left_Linear, Order)
         check (v1@(Var _ typ) : v2 : vs)
@@ -165,7 +167,7 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
         then Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
         else do
             (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args fargs
-            Right $ (concat varss, foldr (combineFlags) (Flags True True True) flags)
+            Right $ (concat varss, foldr (combineFlags) (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags)
 
     Just (Var _ ft@(Type fargs ftid)) | length fargs == (length args + length targs) ->
         Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
@@ -183,7 +185,7 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
         (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
         let freeVars = concat varss
         traceM $ "free variable with order: " ++ show newVarOrder
-        let baseFlags = Flags {well_formed=True, left_linear=True, second_order=newVarOrder <= 2}
+        let baseFlags = Flags {left_linear=True, second_order=newVarOrder <= 2, deterministic_pattern=True, pattern=True}
         let flags = foldr (combineFlags) baseFlags flagss
         Right $ (newVar : freeVars, flags)
 
@@ -199,7 +201,7 @@ typeCheckWithFreeVariables system vars (TermLambda newVars body) t@(Type targs t
 
         let maxOrder = maximum $ map (typeOrder . varType) newVars
         traceM $ "lambda term with order: " ++ show maxOrder
-        let baseFlags = Flags {well_formed=True, left_linear=True, second_order=maxOrder <= 1}
+        let baseFlags = Flags {left_linear=True, second_order=maxOrder <= 1, deterministic_pattern=True, pattern=True}
         -- expected type of the body
         let bodyType = Type (drop (length newVars) targs) tid
         if sameTypes (map varType newVars) (take (length newVars) targs)
