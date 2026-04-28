@@ -164,15 +164,18 @@ functionP :: Parser Var
 functionP = parensP $ stringP "fun" *> void *> (Var <$> idP <*> typeP)
 
 parseVar :: Parser Var
-parseVar = parensP $ (Var <$> idP <*> typeP)
+parseVar = void *> (parensP $ Var <$> idP <*> typeP)
 
 termP :: Parser Term
 termP = atomP <|> applicationP <|> lambdaP
     where
-        lambdaP = void *> stringP "(lambda" *> void *>
-            (TermLambda <$>
-            (charP '(' *> (some parseVar) <* charP ')')
-            <*> termP) <* charP ')'
+        lambdaP = void *> 
+            (parensP $ stringP "lambda" *> void *>
+                (TermLambda <$>
+                    (parensP $ (some parseVar))
+                    <*> termP
+                )
+            )
 
         applicationP = void *> charP '(' *> (Term <$> idP <*> some termP)  <* charP ')'
 
