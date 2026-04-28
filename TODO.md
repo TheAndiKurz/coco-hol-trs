@@ -1,9 +1,15 @@
 # TODOs
 
 - [x] Well formedness
-- [ ] higher-order pattern rewrite system (PRS)
-- [x] second-order
 - [x] left linear
+- [x] second-order
+- [x] Pattern (PRS)
+- [ ] Deterministic Rewrite Pattern (DHS)
+- [ ] Duplicate checking
+
+## When time allows
+
+- [ ] Show why Flag is False
 
 # Questions
 
