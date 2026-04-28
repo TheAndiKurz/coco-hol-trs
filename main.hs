@@ -12,7 +12,7 @@ main = do
         Right (_, system) -> do
             print system
             case checkSystem system of 
-                Left fail_msg-> putStrLn $ red fail_msg
+                Left fail_msg -> putStrLn $ red fail_msg
                 Right (flags, unused_globals) -> do
                     putStrLn $ show flags
                     if length unused_globals > 0 then do
