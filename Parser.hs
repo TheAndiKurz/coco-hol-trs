@@ -4,26 +4,29 @@ module Parser where
 
 import Control.Applicative
 import Data.Char (isSpace)
-import Data.List (elemIndex, sort, group)
+import Data.List (lines, elemIndex, sort, group)
 import TRS
+import Data.ByteString.Char8 (split)
 
 data Input = Input
     { inputLine :: Integer
     , inputChar :: Integer
     , inputStr :: String
+    , inputComplete :: String
+    , fileName :: String
     } deriving Show
 
-newInput :: String -> Input
-newInput str = Input 1 1 str
+newInput :: String -> String -> Input
+newInput name input_string = Input 1 1 input_string input_string name
 
 -- Pull the first character of the input if there is one still input
 inputHead :: Input -> Maybe (Char, Input)
-inputHead (Input _ _ [])       = Nothing
-inputHead (Input line char (x:xs))
-  | x == '\n' = Just (x, Input (line + 1) 1 xs)
-  | otherwise = Just (x, Input line (char + 1) xs)
+inputHead (Input _ _ [] _ _)       = Nothing
+inputHead (Input line char (x:xs) i fs)
+  | x == '\n' = Just (x, Input (line + 1) 1 xs i fs)
+  | otherwise = Just (x, Input line (char + 1) xs i fs)
 
-data ParseError = ParseError Integer Integer String deriving Show
+data ParseError = ParseError Input String
 
 newtype Parser a = Parser
     { runParser :: Input -> Either [ParseError] (Input, a)
@@ -33,7 +36,7 @@ newParseError :: ParseError -> Either [ParseError] (Input, a)
 newParseError err = Left [err]
 
 parserError :: String -> Parser a
-parserError err = Parser $ \input -> Left [ParseError (inputLine input) (inputChar input) err]
+parserError err = Parser $ \input -> Left [ParseError input err]
 
 instance Functor Parser where
     fmap f (Parser p) =
@@ -65,19 +68,25 @@ instance Alternative Parser where
   (Parser p1) <|> (Parser p2) =
     Parser (\input -> p1 input <|> p2 input)
 
+instance Show ParseError where
+  show (ParseError input err) = 
+    let line_number = fromIntegral $ inputLine input - 1
+        char_number = fromIntegral $ inputChar input - 1
+        ls = lines $ inputComplete input
+        line_number_str = show $ line_number + 1
+        spaces n = take n (repeat ' ')
+    in
+    "Error in " ++ (fileName input) ++ ":" ++ line_number_str ++ ":" ++ show (char_number + 1) ++ "\n" ++ line_number_str ++ " | " ++ (ls !! line_number) ++ "\n" ++ spaces (length line_number_str) ++ " | " ++ spaces char_number ++ "^\n" ++ err ++ "\n"
+
 -- Parser for single character
 charP :: Char -> Parser Char
 charP c = Parser f
     where
         f input@(inputHead -> Just (x, xs))
             | c == x = Right (xs, c)
-            | otherwise = newParseError $ ParseError
-                (inputLine input)
-                (inputChar input)
+            | otherwise = newParseError $ ParseError input
                 ("Expected '" ++ [c] ++ "', but found '" ++ [x] ++ "'")
-        f input = newParseError $ ParseError
-            (inputLine input)
-            (inputChar input)
+        f input = newParseError $ ParseError input
             ("Expected '" ++ [c] ++ "', but reached end of input.")
 
 -- Parser for specific string
@@ -85,7 +94,7 @@ stringP :: String -> Parser String
 stringP str =
     Parser $ \input ->
         case runParser (traverse charP str) input of
-            Left _ -> Left [ParseError (inputLine input) (inputChar input)
+            Left _ -> Left [ParseError input
                     ("Expected \"" ++ str ++ "\", but found \"" ++ (take (length str) (inputStr input)) ++ "\"")]
             result -> result
 
@@ -121,13 +130,11 @@ parseIf desc f =
             | f y -> Right (ys, y)
             | otherwise -> newParseError $
                 ParseError
-                    (inputLine input)
-                    (inputChar input)
+                    input
                     ("Expected " ++ desc ++ ", but found '" ++ [y] ++ "'")
         _ -> newParseError $
             ParseError
-                (inputLine input)
-                (inputChar input)
+                input
                 ("Expected " ++ desc ++ ", but reached end of string")
 
 identCharP :: Parser Char
