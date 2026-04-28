@@ -9,7 +9,7 @@ newtype Id = Id String deriving (Eq, Ord)
 data Sort     = Sort Id deriving Eq
 data Type     = Type [Type] Id deriving Eq
 data Var      = Var Id Type
-data Term     = Term Id [Term] | TermLambda [Var] Term
+data Term     = Term Id [Term] | TermLambda [Var] Term deriving Eq
 
 data Rule = Rule Term Term
 
@@ -195,7 +195,11 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
 
         (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
         let freeVars = concat varss
-        let baseFlags = Flags {left_linear=True, second_order=newVarOrder <= 2, deterministic_pattern=True, pattern=True}
+        let baseFlags = Flags { left_linear=True
+                              , second_order=newVarOrder <= 2
+                              , deterministic_pattern=True
+                              , pattern=(length args == length (nub args))
+                              }
         let flags = foldr (combineFlags) baseFlags flagss
         Right $ (newVar : freeVars, flags)
 
