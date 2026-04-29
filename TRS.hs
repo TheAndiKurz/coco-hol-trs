@@ -109,9 +109,9 @@ checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
 
 checkRule system (Rule ruleLeft ruleRight) = do
     typ@(Type args _) <- getTermType system (functions system) ruleLeft
-    (freeVarsL, flags) <- typeCheckWithFreeVariables system (functions system) ruleLeft typ
+    (freeVarsL, flags) <- typeCheckWithFreeVariables system [] ruleLeft typ
     (freeVarsL, flags') <- checkFreeVars freeVarsL
-    (freeVarsR, flags'') <- typeCheckWithFreeVariables system (functions system ++ freeVarsL) ruleRight typ
+    (freeVarsR, flags'') <- typeCheckWithFreeVariables system freeVarsL ruleRight typ
     if length freeVarsR == 0
     then return $ combineFlags flags $ combineFlags flags' flags''
     else Left $ "rule '" ++ show (ruleLeft, ruleRight)
@@ -147,7 +147,7 @@ varUsedInTerm var@(Var vid _) (Term tid args)
     | otherwise = any (varUsedInTerm var) args
 
 getTermType :: HOLSystem -> [Var] -> Term -> Either String Type
-getTermType system vars term@(Term id args) = case findVar vars id of
+getTermType system bound_vars term@(Term id args) = case findVar (functions system ++ bound_vars) id of
     Just (Var _ (Type fargs _)) | length fargs /= length args ->
         Left $ "function '" ++ show id ++ "' expects " ++ show (length fargs)
             ++ " arguments, but got " ++ show (length args) ++ "."
@@ -171,13 +171,13 @@ getTermTypeFreeVariableError term = Left $
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
 typeCheckWithFreeVariables :: HOLSystem -> [Var] -> Term -> Type -> Either String ([Var], Flags)
-typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid) = case findVar vars fid of
+typeCheckWithFreeVariables system bound_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars) fid of
     -- function application type checking
     Just (Var _ ft@(Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
         then Left $ "term '" ++ show term ++ "' does not have type " ++ show typ
         else do
-            (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args fargs
+            (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system bound_vars) args fargs
             Right $ (concat varss, foldr (combineFlags) (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags)
 
     Just (Var _ ft@(Type fargs ftid)) | length fargs == (length args + length targs) ->
@@ -190,12 +190,12 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
     Nothing | length targs /= 0 -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
-        termTypes <- mapM (getTermType system vars) args
+        termTypes <- mapM (getTermType system bound_vars) args
         let newVarType = Type (termTypes ++ targs) tid
         let newVarOrder = typeOrder newVarType 
         let newVar = Var fid newVarType
 
-        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system vars) args termTypes
+        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system bound_vars) args termTypes
         let freeVars = concat varss
         let baseFlags = Flags { left_linear=True
                               , second_order=newVarOrder <= 2
@@ -207,23 +207,23 @@ typeCheckWithFreeVariables system vars term@(Term fid args) typ@(Type targs tid)
 
     _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
 
-typeCheckWithFreeVariables system vars (TermLambda newVars body) t@(Type targs tid)
-    | length newVars > length targs = Left $
+typeCheckWithFreeVariables system bound_vars (TermLambda new_bound_vars body) t@(Type targs tid)
+    | length new_bound_vars > length targs = Left $
         "lambda function with more variables then expected. Expected at most "
-        ++ show (length targs) ++ " but got " ++ show (length newVars)
+        ++ show (length targs) ++ " but got " ++ show (length new_bound_vars)
     | otherwise = do
         -- no shadowing and no duplicates
-        checkVars "lambda function variable" system (vars ++ newVars)
+        checkVars "lambda function variable" system (bound_vars ++ new_bound_vars)
 
-        let maxOrder = maximum $ map (typeOrder . varType) newVars
-        let baseFlags = Flags {left_linear=True, second_order=maxOrder <= 1, deterministic_pattern=True, pattern=True}
+        let max_order = maximum $ map (typeOrder . varType) new_bound_vars
+        let base_flags = Flags {left_linear=True, second_order=max_order <= 1, deterministic_pattern=True, pattern=True}
         -- expected type of the body
-        let bodyType = Type (drop (length newVars) targs) tid
-        if sameTypes (map varType newVars) (take (length newVars) targs)
+        let body_type = Type (drop (length new_bound_vars) targs) tid
+        if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do 
-            (vars, flags)<- typeCheckWithFreeVariables system (vars ++ newVars) body bodyType
-            return $ (vars, combineFlags flags baseFlags)
-        else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType newVars))
+            (vars, flags)<- typeCheckWithFreeVariables system (bound_vars ++ new_bound_vars) body body_type
+            return $ (vars, combineFlags flags base_flags)
+        else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 
 checkVars :: String -> HOLSystem -> [Var] -> Either String Order
 -- TODO: show name of duplicate vars
