@@ -1,8 +1,9 @@
 module TRS where
-import Data.List (nub, sort)
+import Data.List (nub, sort, unsnoc)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Data.Either (isRight)
+import Debug.Trace (traceM)
 
 newtype Id = Id String deriving (Eq, Ord)
 
@@ -75,7 +76,6 @@ varId (Var id _) = id
 
 varType :: Var -> Type
 varType (Var _ t) = t
-
 
 checkSystem :: HOLSystem -> Either String (Flags, []Var)
 checkSystem system = do
@@ -190,20 +190,22 @@ typeCheckWithFreeVariables system bound_vars term@(Term fid args) typ@(Type targ
     Nothing | length targs /= 0 -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
-        termTypes <- mapM (getTermType system bound_vars) args
-        let newVarType = Type (termTypes ++ targs) tid
-        let newVarOrder = typeOrder newVarType 
-        let newVar = Var fid newVarType
+        term_types <- mapM (getTermType system bound_vars) args
+        let new_var_type = Type (term_types ++ targs) tid
+        let new_var_order = typeOrder new_var_type 
+        let new_var = Var fid new_var_type
 
-        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system bound_vars) args termTypes
-        let freeVars = concat varss
-        let baseFlags = Flags { left_linear=True
-                              , second_order=newVarOrder <= 2
-                              , deterministic_pattern=True
-                              , pattern=(length args == length (nub args))
-                              }
-        let flags = foldr (combineFlags) baseFlags flagss
-        Right $ (newVar : freeVars, flags)
+        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system bound_vars) args term_types
+        let free_vars = concat varss
+
+        let base_flags = Flags { left_linear=True
+                               , second_order=new_var_order <= 2
+                               , deterministic_pattern=checkDeterministicPattern bound_vars args
+                               , pattern=checkPattern bound_vars args
+                               }
+
+        let flags = foldr (combineFlags) base_flags flagss
+        Right $ (new_var : free_vars, flags)
 
     _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
 
@@ -221,7 +223,7 @@ typeCheckWithFreeVariables system bound_vars (TermLambda new_bound_vars body) t@
         let body_type = Type (drop (length new_bound_vars) targs) tid
         if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do 
-            (vars, flags)<- typeCheckWithFreeVariables system (bound_vars ++ new_bound_vars) body body_type
+            (vars, flags) <- typeCheckWithFreeVariables system (bound_vars ++ new_bound_vars) body body_type
             return $ (vars, combineFlags flags base_flags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 
@@ -252,3 +254,98 @@ checkType system (Type args ret) = do
 typeOrder :: Type -> Order
 typeOrder (Type [] ret) = 1
 typeOrder (Type types ret) = 1 + (maximum $ map typeOrder types)
+
+
+-- DHS Deterministic higher-order rewrite patterns
+checkDeterministicPattern :: [Var] -> [Term] -> Bool
+checkDeterministicPattern bound_vars args = 
+    let 
+        onlyBoundSymbols :: [Id] -> Term -> Bool
+        onlyBoundSymbols bound_ids (Term term_id term_args) = elem term_id bound_ids && all (onlyBoundSymbols bound_ids) term_args
+        onlyBoundSymbols bound_ids (TermLambda vars body) = onlyBoundSymbols (bound_ids ++ map varId vars) body
+ 
+        noSubtermPairs = 
+            let pairs = [(term1, term2) | term1 <- args, term2 <- args, term1 /= term2]
+            in not $ any (\(term1, term2) -> isExpandedSubterm bound_vars term1 term2) pairs
+            
+    in 
+    all (onlyBoundSymbols (map varId bound_vars)) args
+    && all (isExpanded bound_vars) args
+    && noSubtermPairs
+
+
+isExpanded :: [Var] -> Term -> Bool
+isExpanded bound_vars (TermLambda local_vars body) = 
+    isExpanded (bound_vars ++ local_vars) body
+
+isExpanded bound_vars (Term head_id term_args) = 
+    case (unsnoc bound_vars, unsnoc term_args) of
+        (Just (_, last_var), Just (first_args, Term arg_id [])) -> 
+            if varId last_var == arg_id 
+            then 
+                (arg_id /= head_id) 
+                && not (any (isFree arg_id) first_args)
+            else 
+                False
+        (Nothing, _) -> True
+        (_, Nothing) -> True
+        _ -> False
+
+isExpandedSubterm :: [Var] -> Term -> Term -> Bool
+-- Checks if term2 is an expanded subterm of term1
+isExpandedSubterm bound_vars term1 term2 =
+    let
+        isVarTerm :: Term -> Bool
+        isVarTerm (Term _ []) = True
+        isVarTerm _ = False
+
+        subterms :: Term -> [Term]
+        subterms t@(Term _ args) = t : concatMap subterms args
+        subterms t@(TermLambda _ body) = t : subterms body
+
+        matchExpanded :: Term -> Term -> Bool
+        matchExpanded (Term h2 args2) (Term h1 args1) 
+            | h1 == h2 && length args1 == length args2 = 
+                let len = length args1
+                    isValidSplit m = 
+                        take m args1 == take m args2 && 
+                        all isVarTerm (drop m args2)
+                in any isValidSplit [0..len]
+                
+        -- If term2 is a lambda, it does not fit the h(s_m, y_k) structure of an expanded term
+        matchExpanded _ _ = False
+
+        in 
+        any (matchExpanded term2) (subterms term1)
+
+-- PRS pattern rewrite system
+checkPattern :: [Var] -> [Term] -> Bool
+checkPattern bound_vars args = 
+    let eta_reduces_args = map etaReduce args
+
+        termSuitableForPattern :: Term -> Bool  
+        termSuitableForPattern (Term tid []) = elem tid (map varId bound_vars)
+        termSuitableForPattern _ = False
+    in
+    all termSuitableForPattern eta_reduces_args
+    && (length eta_reduces_args == length (nub eta_reduces_args)) 
+
+etaReduce :: Term -> Term
+etaReduce (TermLambda vars1 (TermLambda vars2 t)) = etaReduce (TermLambda (vars1 ++ vars2) t)
+etaReduce (TermLambda vars (Term f args)) =
+    let 
+        reduceTail :: [Var] -> [Term] -> ([Var], [Term])
+        reduceTail (var:vars) ((Term arg_id []) : terms)
+            | varId var == arg_id && arg_id /= f && not (any (isFree arg_id) terms) = reduceTail vars terms
+        reduceTail vs as = (reverse vs, reverse as)
+
+        (vars', args') = reduceTail (reverse vars) (reverse args)
+    in 
+        if null vars'
+        then Term f args'
+        else TermLambda vars' (Term f args')
+etaReduce t = t
+
+isFree :: Id -> Term -> Bool
+isFree v (Term id' args') = v == id' || any (isFree v) args'
+isFree v (TermLambda vs body) = v `notElem` map varId vs && isFree v body

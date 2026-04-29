@@ -10,16 +10,34 @@
 (fun leaf (-> Nat Tree))
 (fun sum (-> Tree Nat))
 (fun apply (-> (-> Nat Nat) Nat Nat))
-(fun higher_apply (-> (-> (-> Nat Nat) Nat) Nat)) ; order(higher_apply) = 4 => second_order = False
+(fun higher_apply (-> (-> (-> Nat Nat) Nat) Nat Nat)) ; order(higher_apply) = 4 => second_order = False
 (rule (sum (leaf x)) x)
 (rule (sum (node x yt zt)) (+ x (+ (sum yt) (sum zt))))
 (rule (+ x 0) x)
 (rule (+ x (s y)) (s (+ x y)))
 (rule (node x yt zt) (node x zt yt))
 
-(rule (apply (lambda ( (y Nat) ) (S y y)) x) (S x x)) ; pattern = False
+; pattern = False
+; (rule (apply (lambda ( (y Nat) ) (S y y)) x) (S x x)) 
+(rule 
+    (higher_apply 
+        (lambda ( (y (-> Nat Nat)) )
+            (S (lambda ((z Nat)) (y z)) (y x))
+        )
+        x)
+    (S (lambda ( (z Nat) ) x) x) 
+)
 
-; (rule (higher_apply F) (F (lambda ((x Nat)) (s x)))) ; order(F) = 3 => second_order = false
+; pattern = True
+(rule 
+    (higher_apply 
+        (lambda ( (y (-> Nat Nat)) )
+            (S (lambda ((z Nat)) (y z)))
+        )
+        x)
+    (S (lambda ( (z Nat) ) x)) 
+)
+
 ; (rule (+ n n) (* (s (s 0)) n)) ; left linear becomes false
 ; (rule (apply S x) (S x)) ; free variable 'S' not in eta normal form
 
