@@ -1,7 +1,8 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE DoAndIfThenElse      #-}
 
 module TRS where
-import Data.List (nub, sort, unsnoc)
+import Data.List (nub, sort)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Debug.Trace (trace)
@@ -109,7 +110,7 @@ checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
     "rule '" ++ show rule ++ "' has a lambda term in left-hand side"
 
 checkRule system (Rule ruleLeft ruleRight) = do
-    typ@(Type args _) <- getTermType system (functions system) ruleLeft
+    typ@(Type _ _) <- getTermType system (functions system) ruleLeft
     (freeVarsL, flags) <- typeCheckWithFreeVariables system [] ruleLeft typ
     (freeVarsL, flags') <- checkFreeVars freeVarsL
     (freeVarsR, flags'') <- typeCheckWithFreeVariables system freeVarsL ruleRight typ
@@ -174,14 +175,14 @@ getTermTypeFreeVariableError term = Left $
 typeCheckWithFreeVariables :: HOLSystem -> [Var] -> Term -> Type -> Either String ([Var], Flags)
 typeCheckWithFreeVariables system bound_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars) fid of
     -- function application type checking
-    Just (Var _ ft@(Type fargs ftid)) | length fargs == length args -> do
+    Just (Var _ (Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
         then Left $ "term '" ++ show term ++ "' does not have type " ++ show typ
         else do
             (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system bound_vars) args fargs
             Right $ (concat varss, foldr (combineFlags) (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags)
 
-    Just (Var _ ft@(Type fargs ftid)) | length fargs == (length args + length targs) ->
+    Just (Var _ ft@(Type fargs _)) | length fargs == (length args + length targs) ->
         if ft == typ then
             Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
         else Left $ "term '" ++ show term ++ "' has type " ++ show ft ++ " which is not the expected type " ++ show typ ++ " and it is not in eta normal form."
