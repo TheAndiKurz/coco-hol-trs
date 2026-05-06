@@ -5,6 +5,8 @@ module TRS where
 import Data.List (nub, sort)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
+import Control.Monad.State
+import qualified Data.Map as Map
 import Debug.Trace (trace)
 
 newtype Id = Id String deriving (Eq, Ord)
@@ -14,7 +16,7 @@ data Type     = Type [Type] Id deriving Eq
 data Var      = Var Id Type
 data Term     = Term Id [Term] | TermLambda [Var] Term deriving Eq
 
-data Rule = Rule Term Term
+data Rule = Rule Term Term deriving Eq
 
 instance Show Id where
     show (Id id) = id
@@ -66,7 +68,6 @@ instance Eq Var where
 instance Ord Var where
     compare (Var id1 _) (Var id2 _) = compare id1 id2
 
-
 combineFlags :: Flags -> Flags -> Flags
 combineFlags (Flags ll1 so1 dhs1 prs1) (Flags ll2 so2 dhs2 prs2) = Flags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
  
@@ -79,7 +80,7 @@ varId (Var id _) = id
 varType :: Var -> Type
 varType (Var _ t) = t
 
-checkSystem :: HOLSystem -> Either String (Flags, []Var)
+checkSystem :: HOLSystem -> Either String (Flags, [Var])
 checkSystem system = do
     flags <- checkSorts system
     flags' <- checkFunctions system
@@ -138,6 +139,9 @@ checkFreeVars vars = do
                 return $ (v1 : vs, ll, max order $ typeOrder typ)
         check [v@(Var _ typ)] = Right ([v], True, typeOrder typ)
         check [] = Right ([], True, 1)
+
+sortUsedInType :: Sort -> Type -> Bool
+sortUsedInType s@(Sort sort_id) (Type args type_id) = sort_id == type_id || any (sortUsedInType s) args
 
 varUsedInRule :: Var -> Rule -> Bool
 varUsedInRule var (Rule t1 t2) = varUsedInTerm var t1 || varUsedInTerm var t2
@@ -293,7 +297,6 @@ checkDeterministicPattern system bound_vars args =
         isLambda (TermLambda _ _) = True
         isLambda _ = False
     in 
-    trace ("pairs: " ++ show term_pairs)
     -- every arg has at least one bound var
     all (containsBoundVar (map varId bound_vars)) eta_reduces_args 
     -- all vars are bound by either variable of function symbol
@@ -338,4 +341,88 @@ isFree var_id (TermLambda vs body) = var_id `notElem` map varId vs && isFree var
 hasFree :: [Id] -> Term -> Bool
 hasFree ids (Term term_id term_args) = not (elem term_id ids) || any (hasFree ids) term_args
 hasFree ids (TermLambda new_vars body) = hasFree (ids ++ map varId new_vars) body
+
+
+-- duplicate checking
+alphaEqual :: HOLSystem -> HOLSystem -> Bool
+alphaEqual system1 system2 =
+    let system1' = alphaNormalizeRules system1 in
+    let system1 = removeUnused system1' in
+    let system2' = alphaNormalizeRules system2 in
+    let system2 = removeUnused system2' in
+
+    trace (show system1 ++ show system2)
+    False
+
+removeUnused :: HOLSystem -> HOLSystem
+removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules}) =
+    let 
+        filtered_functions = [function | function <- _functions, any (varUsedInRule function) _rules]
+        filtered_sorts = [sort | sort <- _sorts, any (sortUsedInType sort) $ map varType filtered_functions]
+    in 
+    HOLSystem { sorts=filtered_sorts
+              , functions=filtered_functions
+              , rules=nub _rules
+              }
+
+alphaNormalizeRules :: HOLSystem -> HOLSystem
+alphaNormalizeRules HOLSystem {sorts=_sorts, functions=_functions, rules=_rules} = 
+    HOLSystem { sorts=_sorts
+              , functions=_functions
+              , rules=map (alphaNormalizeRule (\id -> not (elem id $ map varId _functions))) _rules
+              }
+
+data RenameState = RenameState 
+    { freeVars   :: Map.Map Id Id  -- Maps original free Id to x_i
+    , freeCount  :: Int            -- Counter for x_i
+    , boundCount :: Int            -- Counter for z_i
+    }
+
+alphaNormalizeRule :: (Id -> Bool) -> Rule -> Rule
+alphaNormalizeRule isVar (Rule lhs rhs) = 
+    let 
+        renameTerm :: (Id -> Bool) -> Map.Map Id Id -> Term -> State RenameState Term
+        renameTerm isVar boundEnv (Term id args) = do
+            newId <- case Map.lookup id boundEnv of
+                Just boundId -> return boundId
+                Nothing -> 
+                    if isVar id 
+                    then getFreeVar id
+                    else return id
+            newArgs <- mapM (renameTerm isVar boundEnv) args
+            return $ Term newId newArgs
+        
+        renameTerm isVar boundEnv (TermLambda vars body) = do
+            (newVars, newEnv) <- foldM bindVar ([], boundEnv) vars
+            newBody <- renameTerm isVar newEnv body
+            return $ TermLambda (reverse newVars) newBody
+        
+        bindVar :: ([Var], Map.Map Id Id) -> Var -> State RenameState ([Var], Map.Map Id Id)
+        bindVar (accVars, env) (Var oldId typ) = do
+            st <- get
+            let c = boundCount st
+            put st { boundCount = c + 1 }
+            
+            let newId = Id ("z" ++ show c)
+            let newVar = Var newId typ 
+            return (newVar : accVars, Map.insert oldId newId env)
+        
+        getFreeVar :: Id -> State RenameState Id
+        getFreeVar oldId = do
+            st <- get
+            case Map.lookup oldId (freeVars st) of
+                Just newId -> return newId
+                Nothing -> do
+                    let c = freeCount st
+                    let newId = Id ("x" ++ show c)
+                    put st { freeCount = c + 1
+                           , freeVars = Map.insert oldId newId (freeVars st) 
+                           }
+                    return newId
+    in
+    evalState (do
+      lhs' <- renameTerm isVar Map.empty lhs
+      rhs' <- renameTerm isVar Map.empty rhs
+      return $ Rule lhs' rhs'
+    ) (RenameState Map.empty 1 1)
 

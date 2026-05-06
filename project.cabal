@@ -13,6 +13,7 @@ library core-lib
     hs-source-dirs:     core
     exposed-modules:    Parser
                         TRS
+    build-depends: mtl, containers
 
 executable flaging
     import:             shared-properties

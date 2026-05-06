@@ -8,10 +8,10 @@ import System.Environment
 
 flagAri :: String -> IO ()
 flagAri file_name = do 
-    content <- readFile file_name
-    case runParser holSystemP $ newInput file_name content of
+    parseResult <- parseSystemFromFile file_name
+    case parseResult of
         Left errors -> mapM_ (putStrLn . red . show) errors
-        Right (_, system) -> do
+        Right system -> do
             print system
             case checkSystem system of 
                 Left fail_msg -> putStrLn $ red fail_msg

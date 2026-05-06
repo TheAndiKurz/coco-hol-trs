@@ -5,7 +5,6 @@ module Parser where
 
 import Control.Applicative
 import Data.Char (isSpace)
-import Data.List (lines, elemIndex, sort, group)
 import TRS
 
 data Input = Input
@@ -208,3 +207,17 @@ holSystemP = do
     rules <- parseRules
 
     return $ HOLSystem sorts functions rules
+
+parseSystem :: String -> Either [ParseError] HOLSystem
+parseSystem content = 
+    case runParser holSystemP $ newInput "" content of
+        Left err -> Left err
+        Right (_, system) -> Right system
+
+parseSystemFromFile :: String -> IO (Either [ParseError] HOLSystem)
+parseSystemFromFile file_name = do
+    content <- readFile file_name
+    return $ case runParser holSystemP $ newInput file_name content of
+        Left err -> Left err
+        Right (_, system) -> Right system
+

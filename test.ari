@@ -2,6 +2,8 @@
 
 (sort Nat)
 (sort Tree)
+(sort removed)
+(fun removed removed)
 (fun * (-> Nat Nat Nat))
 (fun + (-> Nat Nat Nat))
 (fun s (-> Nat Nat))
