@@ -8,11 +8,16 @@
 (fun rhs a)
 (fun c a)
 
-(rule (lhs1 (lambda ((x a) (y a)) (F y x))) rhs)
+;; DHP rules
+; (rule (lhs1 (lambda ((x a) (y a)) (F y x))) rhs)
 ; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) (f y)))) rhs)
 ; (rule (lhs2 (lambda ((x (-> a a)) (y a)) (F (x y) (x c)))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) (f (f y))))) rhs)
+
+;; no DHP rules
 ; (rule (lhs1 (lambda ((x a) (y a)) (F c x))) rhs)
 ; (rule (lhs3 (lambda ((x (-> a a a)) (y a)) (G y (lambda ((z a)) (x z c))))) rhs)
 ; (rule (lhs1 (lambda ((x a) (y a)) (F x x))) rhs)
 ; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) x))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) (f (f x))))) rhs)
 ; (rule (lhs2 (lambda ((x (-> a a)) (y a)) (G (x y) (lambda ((z a)) (x z))))) rhs)

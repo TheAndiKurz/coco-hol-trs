@@ -4,10 +4,10 @@ module Main where
 
 import TRS
 import Parser
+import System.Environment
 
-main :: IO ()
-main = do
-    let file_name = "test.trs"
+flagAri :: String -> IO ()
+flagAri file_name = do 
     content <- readFile file_name
     case runParser holSystemP $ newInput file_name content of
         Left errors -> mapM_ (putStrLn . red . show) errors
@@ -21,6 +21,11 @@ main = do
                         putStrLn $ yellow $ "Unused global variables detected:"
                         mapM_ (putStrLn . yellow . ("  " ++) . show) unused_globals
                     else return ()
+
+main :: IO ()
+main = do
+    cmd_args <- getArgs
+    mapM_ flagAri cmd_args
 
 
 
