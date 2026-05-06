@@ -1,4 +1,5 @@
 {-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE FlexibleInstances      #-}
 
 module Parser where
 
@@ -6,7 +7,6 @@ import Control.Applicative
 import Data.Char (isSpace)
 import Data.List (lines, elemIndex, sort, group)
 import TRS
-import Data.ByteString.Char8 (split)
 
 data Input = Input
     { inputLine :: Integer

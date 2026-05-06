@@ -1,0 +1,27 @@
+cabal-version:      3.0
+name:               coco-hol-trs
+version:            0.1.0.0
+license:            MIT
+build-type:         Simple
+
+common shared-properties
+    ghc-options:        -Wall
+    build-depends: base
+
+library core-lib
+    import:             shared-properties
+    hs-source-dirs:     core
+    exposed-modules:    Parser
+                        TRS
+
+executable flaging
+    import:             shared-properties
+    main-is:            Main.hs
+    hs-source-dirs:     flaging
+    build-depends:      core-lib
+
+executable duplicate-checker
+    import:             shared-properties
+    main-is:            Main.hs
+    hs-source-dirs:     duplicate_checker
+    build-depends:      core-lib

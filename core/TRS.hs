@@ -1,3 +1,5 @@
+{-# LANGUAGE DoAndIfThenElse      #-}
+
 module TRS where
 import Data.List (nub, sort, unsnoc)
 import Data.Foldable (find)
