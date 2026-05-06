@@ -3,9 +3,8 @@ module Main where
 import TRS
 import Parser
 
-main :: IO ()
-main = do
-    let file_name = "test.trs"
+test :: String -> IO ()
+test file_name = do 
     content <- readFile file_name
     case runParser holSystemP $ newInput file_name content of
         Left errors -> mapM_ (putStrLn . red . show) errors
@@ -19,6 +18,9 @@ main = do
                         putStrLn $ yellow $ "Unused global variables detected:"
                         mapM_ (putStrLn . yellow . ("  " ++) . show) unused_globals
                     else return ()
+
+main :: IO ()
+main = test "test.ari"
 
 
 

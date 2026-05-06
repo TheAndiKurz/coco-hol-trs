@@ -1,0 +1,18 @@
+(format higher-order)
+(sort a)
+
+(fun f (-> a a))
+(fun lhs1 (-> (-> a a a) a))
+(fun lhs2 (-> (-> (-> a a) a a) a))
+(fun lhs3 (-> (-> (-> a a a) a a) a))
+(fun rhs a)
+(fun c a)
+
+(rule (lhs1 (lambda ((x a) (y a)) (F y x))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) (f y)))) rhs)
+; (rule (lhs2 (lambda ((x (-> a a)) (y a)) (F (x y) (x c)))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F c x))) rhs)
+; (rule (lhs3 (lambda ((x (-> a a a)) (y a)) (G y (lambda ((z a)) (x z c))))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F x x))) rhs)
+; (rule (lhs1 (lambda ((x a) (y a)) (F (f x) x))) rhs)
+; (rule (lhs2 (lambda ((x (-> a a)) (y a)) (G (x y) (lambda ((z a)) (x z))))) rhs)
