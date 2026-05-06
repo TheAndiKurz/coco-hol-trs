@@ -8,7 +8,7 @@ main = do
     Right system1 <- parseSystemFromFile "test.ari"
     Right system2 <- parseSystemFromFile "dhp_test.ari"
 
-    print $ alphaEqual system1 system2
+    print $ duplicate system1 system1
 
     return ()
 

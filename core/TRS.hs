@@ -344,14 +344,25 @@ hasFree ids (TermLambda new_vars body) = hasFree (ids ++ map varId new_vars) bod
 
 
 -- duplicate checking
-alphaEqual :: HOLSystem -> HOLSystem -> Bool
-alphaEqual system1 system2 =
+duplicate :: HOLSystem -> HOLSystem -> Bool
+duplicate system1 system2 =
     let system1' = alphaNormalizeRules system1 in
     let system1 = removeUnused system1' in
     let system2' = alphaNormalizeRules system2 in
     let system2 = removeUnused system2' in
+    
+    if length (functions system1) /= length (functions system2) &&
+        length (sorts system1) /= length (sorts system2)
+    then False else
 
-    trace (show system1 ++ show system2)
+    let
+        type_classes1 = varsDevideIntoTypeClasses $ functions system1 
+        type_classes2 = varsDevideIntoTypeClasses $ functions system2 
+    in
+
+    if length type_classes1 /= length type_classes2 then False else
+
+    trace (show system1 ++ show system2 ++ "\n" ++ "\n" ++ show type_classes1 ++ "\n" ++ show type_classes2)
     False
 
 removeUnused :: HOLSystem -> HOLSystem
@@ -380,7 +391,12 @@ data RenameState = RenameState
 
 alphaNormalizeRule :: (Id -> Bool) -> Rule -> Rule
 alphaNormalizeRule isVar (Rule lhs rhs) = 
-    let 
+    evalState (do
+      lhs' <- renameTerm isVar Map.empty lhs
+      rhs' <- renameTerm isVar Map.empty rhs
+      return $ Rule lhs' rhs'
+    ) (RenameState Map.empty 1 1)
+    where 
         renameTerm :: (Id -> Bool) -> Map.Map Id Id -> Term -> State RenameState Term
         renameTerm isVar boundEnv (Term id args) = do
             newId <- case Map.lookup id boundEnv of
@@ -419,10 +435,20 @@ alphaNormalizeRule isVar (Rule lhs rhs) =
                            , freeVars = Map.insert oldId newId (freeVars st) 
                            }
                     return newId
-    in
-    evalState (do
-      lhs' <- renameTerm isVar Map.empty lhs
-      rhs' <- renameTerm isVar Map.empty rhs
-      return $ Rule lhs' rhs'
-    ) (RenameState Map.empty 1 1)
 
+varsDevideIntoTypeClasses :: [Var] -> [[Var]]
+varsDevideIntoTypeClasses vars = 
+    let 
+        insertVar :: Var -> [[Var]] -> [[Var]]
+        insertVar _ ([] : _) = error "there cannot be an empty type_class"
+        insertVar new_var (type_class@(rep : _) : rest_classes)
+            | typeSameSkeleton (varType new_var) (varType rep) = (new_var : type_class) : rest_classes
+            | otherwise = type_class : insertVar new_var rest_classes
+        insertVar new_var [] = [[new_var]]
+    in
+    foldr insertVar [] vars
+
+typeSameSkeleton :: Type -> Type -> Bool
+typeSameSkeleton (Type args1 _) (Type args2 _)
+    | length args1 /= length args2 = False
+    | otherwise = all id $ zipWith typeSameSkeleton args1 args2
