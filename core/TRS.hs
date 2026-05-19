@@ -7,7 +7,7 @@ import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Control.Monad.State
 import qualified Data.Map as Map
-import Debug.Trace (trace, traceM)
+import Debug.Trace (trace)
 import Utils
 
 newtype Id = Id String deriving (Eq, Ord)
@@ -357,26 +357,30 @@ hasFree ids (TermLambda new_vars body) = hasFree (ids ++ map varId new_vars) bod
 
 
 -- duplicate checking
-duplicate :: HOLSystem -> HOLSystem -> Bool
-duplicate system1 system2 =
-    let system1' = alphaNormalizeRules system1 in
-    let system1 = removeUnused system1' in
-    let system2' = alphaNormalizeRules system2 in
-    let system2 = removeUnused system2' in
-    
-    if length (functions system1) /= length (functions system2) &&
-        length (sorts system1) /= length (sorts system2)
+preProcessSystemDuplicates :: HOLSystem -> (HOLSystem, [[Var]])
+preProcessSystemDuplicates system = 
+    let system' = alphaNormalizeRules $ removeUnused system in
+    (system', varsDevideIntoTypeClasses $ functions system')
+
+-- should use preProcessSystemDuplicates before calling this function
+duplicate :: (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> Bool
+duplicate (system1, type_classes1) (system2, type_classes2) =
+    if length (functions system1) /= length (functions system2) ||
+       length (sorts system1) /= length (sorts system2) || 
+       length type_classes1 /= length type_classes2
     then False else
 
-    let
-        type_classes1 = varsDevideIntoTypeClasses $ functions system1 
-        type_classes2 = varsDevideIntoTypeClasses $ functions system2 
-    in
-
-    if length type_classes1 /= length type_classes2 then False else
-
-    trace (show system1 ++ show system2 ++ "\n" ++ "\n" ++ show type_classes1 ++ "\n" ++ show type_classes2)
-    False
+    case groupTypeClasses type_classes1 type_classes2 of
+        Nothing -> False -- some type_class in first system does not match any other type_class in the other system
+        Just groups -> 
+            trace (show system1 ++ "\n\n" ++ show system2 ++ "\n\n" ++ concatMap ((++ "\n") . show) groups)
+            -- build the smt solver constraints
+            -- vars for sorts (sorts are distinct and have to match to one sort of the other system)
+            -- vars for every function symbol
+            -- function symbols need to have a counterpart in the typeclass group
+            -- sorts of function symbols need to match
+            -- for the rules?
+            True
 
 removeUnused :: HOLSystem -> HOLSystem
 removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules}) =
@@ -460,6 +464,28 @@ varsDevideIntoTypeClasses vars =
         insertVar new_var [] = [[new_var]]
     in
     foldr insertVar [] vars
+
+groupTypeClasses :: [[Var]] -> [[Var]] -> Maybe [([Var], [Var])]
+groupTypeClasses [] [] = Just []
+groupTypeClasses [] _ = Nothing
+groupTypeClasses (c1@(v1:_):restClasses1) classes2 =
+    let 
+        isMatch :: [Var] -> Bool
+        isMatch (v2:_) = typeSameSkeleton (varType v1) (varType v2)
+        isMatch []     = False
+        
+        extractMatch :: [[Var]] -> (Maybe [Var], [[Var]])
+        extractMatch [] = (Nothing, [])
+        extractMatch (x:xs)
+            | isMatch x = (Just x, xs)
+            | otherwise = let (m, rest) = extractMatch xs in (m, x : rest)
+            
+        (matchedClass, remainingClasses2) = extractMatch classes2
+    in case matchedClass of
+        Just c2 -> (:) (c1, c2) <$> groupTypeClasses restClasses1 remainingClasses2
+        Nothing -> Nothing
+
+groupTypeClasses ([]:_) _ = error "there cannot be an empty type_class"
 
 typeSameSkeleton :: Type -> Type -> Bool
 typeSameSkeleton (Type args1 _) (Type args2 _)

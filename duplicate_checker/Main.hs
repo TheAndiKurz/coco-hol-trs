@@ -2,14 +2,29 @@ module Main where
 
 import TRS
 import Parser
+import System.Environment (getArgs)
+import Data.List (nub, tails)
+import Data.Either (partitionEithers)
 
 main :: IO ()
 main = do
-    Right system1 <- parseSystemFromFile "test.ari"
-    Right system2 <- parseSystemFromFile "dhp_test.ari"
+    cmd_args <- getArgs
+    let unique_args = nub cmd_args
+    putStrLn $ show $ length unique_args
+    parse_result <- mapM parseSystemFromFile unique_args
 
-    print $ duplicate system1 system1
+    let (errs, systems) = partitionEithers parse_result
+    if not $ null errs then mapM_ (putStrLn . show) errs else do
+    
+    let preprocessed_systems = map preProcessSystemDuplicates systems
 
+    let duplicate_systems = [ (s1, s2) 
+                            | (s1:rest) <- tails preprocessed_systems
+                            , s2 <- rest 
+                            , duplicate s1 s2
+                            ]
+
+    mapM_ (putStrLn . (++ "\n\n") . show) duplicate_systems
     return ()
 
 
