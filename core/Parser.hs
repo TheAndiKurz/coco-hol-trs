@@ -150,14 +150,14 @@ sortP = parensP $ void *> stringP "sort" *> void *> (Sort <$> idP)
 
 -- data Type     = TypeSort Integer | TypeFunction [Type] deriving Show
 typeP :: Parser Type
-typeP = void *> (functionP <|> sortP)
+typeP = void *> (applicableP <|> constP)
     where
-        functionP = do
+        applicableP = do
             types <- parensP $ stringP "->" *> void *> (some typeP)
             case last types of
                 (Type [] sort) -> pure $ Type (take (length types - 1) types) sort
                 _ -> parserError "return type of a function is not a sort"
-        sortP = void *> (Type <$> pure [] <*> idP)
+        constP = void *> (Type <$> pure [] <*> idP)
 
 functionP :: Parser Var
 functionP = parensP $ stringP "fun" *> void *> (Var <$> idP <*> typeP)
@@ -166,17 +166,16 @@ parseVar :: Parser Var
 parseVar = void *> (parensP $ Var <$> idP <*> typeP)
 
 termP :: Parser Term
-termP = atomP <|> applicationP <|> lambdaP
+termP = void *> (atomP <|> applicationP <|> lambdaP)
     where
-        lambdaP = void *> 
-            (parensP $ stringP "lambda" *> void *>
+        lambdaP = parensP $ stringP "lambda" *> void *>
                 (TermLambda <$>
-                    (parensP $ (some parseVar))
+                    (parensP $ some parseVar)
                     <*> termP
                 )
-            )
+            
 
-        applicationP = void *> charP '(' *> (Term <$> idP <*> some termP)  <* charP ')'
+        applicationP = parensP $ Term <$> idP <*> some termP
 
         atomP = Term <$> idP <*> pure []
 
