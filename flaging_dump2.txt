@@ -1,13 +1,13 @@
 problems/1037.ari: HRS DPRS PRS left-linear second-order
-problems/1165.ari: HRS DPRS PRS left-linear second-order
-problems/1166.ari: HRS DPRS PRS left-linear second-order
+problems/1165.ari: HRS DPRS PRS second-order
+problems/1166.ari: HRS DPRS PRS second-order
 problems/426.ari: HRS DPRS PRS left-linear second-order
 problems/427.ari: HRS DPRS PRS left-linear second-order
 problems/428.ari: HRS DPRS PRS left-linear second-order
 problems/429.ari: HRS DPRS PRS left-linear second-order
 problems/430.ari: HRS DPRS PRS left-linear second-order
 problems/431.ari: HRS DPRS PRS left-linear second-order
-problems/432.ari: HRS DPRS PRS left-linear second-order
+problems/432.ari: HRS DPRS PRS second-order
 problems/433.ari: HRS DPRS PRS left-linear second-order
 problems/434.ari: HRS DPRS PRS left-linear second-order
 problems/435.ari: HRS DPRS PRS left-linear
@@ -26,7 +26,7 @@ problems/457.ari: HRS DPRS PRS left-linear second-order
 problems/458.ari: HRS DPRS PRS left-linear second-order
 problems/459.ari: HRS DPRS PRS left-linear second-order
 problems/460.ari: HRS DPRS PRS left-linear second-order
-problems/462.ari: HRS DPRS PRS left-linear second-order
+problems/462.ari: HRS DPRS PRS second-order
 problems/463.ari: HRS DPRS PRS left-linear second-order
 problems/464.ari: HRS DPRS PRS left-linear second-order
 problems/465.ari: HRS DPRS PRS left-linear second-order
@@ -62,14 +62,14 @@ problems/517.ari: [31mevery lambda function variable has to have a unique name 
 problems/518.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: x[0m
 problems/519.ari: HRS DPRS PRS left-linear second-order
 problems/520.ari: HRS DPRS PRS left-linear second-order
-problems/722.ari: HRS DPRS PRS left-linear second-order
-problems/723.ari: HRS DPRS PRS left-linear second-order
+problems/722.ari: HRS DPRS PRS second-order
+problems/723.ari: HRS DPRS PRS second-order
 problems/724.ari: HRS DPRS PRS left-linear second-order
 problems/725.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: z[0m
 problems/726.ari: HRS DPRS PRS left-linear second-order
 problems/727.ari: HRS DPRS PRS left-linear second-order
-problems/728.ari: HRS DPRS PRS left-linear second-order
-problems/729.ari: HRS DPRS PRS left-linear second-order
+problems/728.ari: HRS DPRS PRS second-order
+problems/729.ari: HRS DPRS PRS second-order
 problems/742.ari: HRS left-linear second-order
 problems/743.ari: HRS left-linear second-order
 problems/744.ari: HRS DPRS left-linear second-order
@@ -81,34 +81,34 @@ problems/749.ari: HRS DPRS left-linear second-order
 problems/750.ari: HRS DPRS left-linear second-order
 problems/751.ari: HRS DPRS left-linear second-order
 problems/752.ari: HRS DPRS left-linear second-order
-problems/753.ari: HRS DPRS left-linear second-order
+problems/753.ari: HRS DPRS second-order
 problems/754.ari: HRS DPRS left-linear second-order
 problems/755.ari: [31mfree variable '(v x)' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
 problems/757.ari: HRS DPRS left-linear second-order
-problems/758.ari: HRS DPRS PRS left-linear second-order
+problems/758.ari: HRS second-order
 problems/759.ari: HRS DPRS PRS left-linear second-order
 problems/764.ari: HRS DPRS PRS left-linear second-order
 problems/766.ari: [31mfree variable 'X' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
-problems/767.ari: HRS left-linear second-order
-problems/768.ari: HRS DPRS PRS left-linear second-order
-problems/769.ari: HRS DPRS left-linear second-order
+problems/767.ari: HRS second-order
+problems/768.ari: HRS DPRS PRS second-order
+problems/769.ari: HRS DPRS second-order
 problems/771.ari: HRS DPRS PRS left-linear second-order
 problems/772.ari: HRS DPRS PRS left-linear second-order
 problems/773.ari: HRS DPRS left-linear second-order
 problems/774.ari: HRS DPRS PRS left-linear second-order
 problems/775.ari: HRS DPRS PRS left-linear second-order
 problems/776.ari: HRS DPRS PRS left-linear second-order
-problems/777.ari: HRS DPRS PRS left-linear second-order
-problems/778.ari: HRS DPRS PRS left-linear second-order
-problems/779.ari: HRS DPRS left-linear second-order
-problems/780.ari: HRS DPRS left-linear second-order
+problems/777.ari: HRS DPRS PRS second-order
+problems/778.ari: HRS DPRS PRS second-order
+problems/779.ari: HRS second-order
+problems/780.ari: HRS second-order
 problems/781.ari: HRS DPRS PRS left-linear second-order
 problems/782.ari: HRS DPRS PRS left-linear second-order
 problems/783.ari: HRS DPRS PRS left-linear second-order
 problems/784.ari: HRS DPRS left-linear second-order
 problems/785.ari: HRS DPRS left-linear second-order
-problems/786.ari: HRS DPRS left-linear second-order
-problems/787.ari: HRS DPRS left-linear second-order
+problems/786.ari: HRS second-order
+problems/787.ari: HRS second-order
 problems/788.ari: HRS DPRS PRS left-linear second-order
 problems/789.ari: HRS DPRS left-linear second-order
 problems/diff.ari: HRS DPRS PRS left-linear second-order
@@ -120,7 +120,7 @@ problems/nm_iwc2025_ex2.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex3.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex4.ari: HRS DPRS left-linear second-order
 problems/nnf.ari: HRS DPRS PRS left-linear second-order
-problems/pad.ari: HRS DPRS PRS left-linear second-order
+problems/pad.ari: HRS second-order
 problems/pnf.ari: HRS DPRS PRS left-linear second-order
 problems/round.ari: HRS DPRS left-linear second-order
-problems/sdu.ari: HRS DPRS left-linear second-order
+problems/sdu.ari: HRS DPRS second-order

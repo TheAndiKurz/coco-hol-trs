@@ -7,7 +7,7 @@ import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Control.Monad.State
 import qualified Data.Map as Map
-import Debug.Trace (trace)
+import Debug.Trace (trace, traceM)
 import Utils
 
 newtype Id = Id String deriving (Eq, Ord)
@@ -83,6 +83,9 @@ varId (Var id _) = id
 
 varType :: Var -> Type
 varType (Var _ t) = t
+
+typeArgs :: Type -> [Type]
+typeArgs (Type args _) = args
 
 checkSystem :: HOLSystem -> Either String (Flags, [Var])
 checkSystem system = do
@@ -179,7 +182,7 @@ getTermTypeFreeVariableError term = Left $
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
 typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> [Var] -> Term -> Type -> Either String ([Var], Flags)
-typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars ++ free_vars) fid of
+typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars) fid of
     -- function application type checking
     Just (Var _ (Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
@@ -205,8 +208,10 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) 
     Nothing | length targs /= 0 -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
-        term_types <- mapM (getTermType system (bound_vars ++ free_vars)) args
-        let new_var_type = Type (term_types ++ targs) tid
+        term_types <- case findVar free_vars fid of 
+            Nothing -> mapM (getTermType system (bound_vars ++ free_vars)) args
+            Just var -> Right $ typeArgs $ varType var
+        let new_var_type = Type term_types tid
         let new_var_order = typeOrder new_var_type 
         let new_var = Var fid new_var_type
 
