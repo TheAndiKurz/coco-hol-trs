@@ -85,7 +85,7 @@ problems/753.ari: HRS DPRS second-order
 problems/754.ari: HRS DPRS left-linear second-order
 problems/755.ari: [31mfree variable '(v x)' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
 problems/757.ari: HRS DPRS left-linear second-order
-problems/758.ari: [31mfree variable 'E' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
+problems/758.ari: HRS second-order
 problems/759.ari: HRS DPRS PRS left-linear second-order
 problems/764.ari: HRS DPRS PRS left-linear second-order
 problems/766.ari: [31mfree variable 'X' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
@@ -120,7 +120,7 @@ problems/nm_iwc2025_ex2.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex3.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex4.ari: HRS DPRS left-linear second-order
 problems/nnf.ari: HRS DPRS PRS left-linear second-order
-problems/pad.ari: [31mfree variable 'd' cannot get infered with this scope. Maybe it is a free variable as direct argument of an application of a free variable or it is the root of a rule?[0m
+problems/pad.ari: HRS second-order
 problems/pnf.ari: HRS DPRS PRS left-linear second-order
 problems/round.ari: HRS DPRS left-linear second-order
 problems/sdu.ari: HRS DPRS second-order

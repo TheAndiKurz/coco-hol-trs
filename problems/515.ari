@@ -6,5 +6,5 @@
 (fun cons (-> a alist alist))
 (fun map (-> (-> a a) alist alist))
 (rule (map (lambda ((x a)) (f x)) nil) nil)
-(rule (map (lambda ((x a)) (f x)) (cons x xs)) (cons (f x) (map (lambda ((x a)) (f x)) xs)))
+(rule (map (lambda ((x a)) (f x)) (cons x xs)) (cons (f x) (map (lambda ((x' a)) (f x')) xs)))
 (rule (map (lambda ((x a)) (f x)) (map (lambda ((x a)) (g x)) xs)) (map (lambda ((y a)) (f (g y))) xs))

@@ -18,7 +18,7 @@
 (rule (app (cons x xs) ys) (cons x (app xs ys)))
 (rule (app (app xs ys) zs) (app xs (app ys zs)))
 (rule (singleton x) (cons x nil))
-(rule (rev xs) (foldr1 (lambda ((x a) (xs la)) (app xs (singleton x))) nil xs))
+(rule (rev xs) (foldr1 (lambda ((x a) (xs' la)) (app xs' (singleton x))) nil xs))
 (rule (fastrev xs ys) (app (rev xs) ys))
 (rule (foldr1 (lambda ((x a) (y la)) (G x y)) e xs) (check (lambda ((x a) (y la) (z la)) (app (G x y) z)) e xs))
 (rule (check (lambda ((x a) (y la) (z la)) (F x (lambda ((w la)) (app y w)) z)) e xs)

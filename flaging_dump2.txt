@@ -56,16 +56,16 @@ problems/500.ari: HRS left-linear second-order
 problems/501.ari: HRS DPRS PRS left-linear second-order
 problems/513.ari: HRS DPRS PRS left-linear second-order
 problems/514.ari: HRS DPRS PRS left-linear second-order
-problems/515.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: x[0m
-problems/516.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: x[0m
-problems/517.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: x[0m
-problems/518.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: x[0m
+problems/515.ari: HRS DPRS PRS left-linear second-order
+problems/516.ari: HRS DPRS PRS left-linear second-order
+problems/517.ari: HRS DPRS PRS left-linear
+problems/518.ari: HRS DPRS PRS left-linear
 problems/519.ari: HRS DPRS PRS left-linear second-order
 problems/520.ari: HRS DPRS PRS left-linear second-order
 problems/722.ari: HRS DPRS PRS second-order
 problems/723.ari: HRS DPRS PRS second-order
 problems/724.ari: HRS DPRS PRS left-linear second-order
-problems/725.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: z[0m
+problems/725.ari: HRS DPRS PRS left-linear second-order
 problems/726.ari: HRS DPRS PRS left-linear second-order
 problems/727.ari: HRS DPRS PRS left-linear second-order
 problems/728.ari: HRS DPRS PRS second-order
@@ -114,7 +114,7 @@ problems/789.ari: HRS DPRS left-linear second-order
 problems/diff.ari: HRS DPRS PRS left-linear second-order
 problems/fusion-from.ari: HRS DPRS left-linear second-order
 problems/fusion.ari: HRS DPRS left-linear second-order
-problems/fusion2.ari: [31mevery lambda function variable has to have a unique name and cannot be shadowed. Duplicated variable name: xs[0m
+problems/fusion2.ari: HRS DPRS left-linear
 problems/hasegawa_linear_lambda_calc.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex2.ari: HRS DPRS left-linear second-order
 problems/nm_iwc2025_ex3.ari: HRS DPRS left-linear second-order
