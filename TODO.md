@@ -4,7 +4,7 @@
 - [x] left linear
 - [x] second-order
 - [x] Pattern (PRS)
-- [ ] Deterministic Rewrite Pattern (DHS)
+- [x] Deterministic Rewrite Pattern (DHS)
 - [ ] Duplicate checking
 
 ## When time allows
