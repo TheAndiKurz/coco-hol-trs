@@ -1,0 +1,8 @@
+; @cops 767
+(format HRS)
+(sort term)
+(fun F (-> term term term))
+(fun D term)
+(fun G (-> term term))
+(rule (G (y (F t u))) (F t u))
+(rule (F x x) D)

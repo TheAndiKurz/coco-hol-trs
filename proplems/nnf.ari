@@ -1,0 +1,15 @@
+; negational normal form
+; source: Mayr & Nipkow TCS 1998
+(format higher-order)
+(sort t)
+(sort f)
+(fun not (-> f f))
+(fun and (-> f f f))
+(fun or (-> f f f))
+(fun forall (-> (-> t f) f))
+(fun exists (-> (-> t f) f))
+(rule (not (not p)) p)
+(rule (not (and p q)) (or (not p) (not q)))
+(rule (not (or p q)) (and (not p) (not q)))
+(rule (not (forall (lambda ((x t)) (R x)))) (exists (lambda ((x t)) (not (R x)))))
+(rule (not (exists (lambda ((x t)) (R x)))) (forall (lambda ((x t)) (not (R x)))))

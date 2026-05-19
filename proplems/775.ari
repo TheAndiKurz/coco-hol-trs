@@ -1,0 +1,6 @@
+; @cops 775
+(format HRS)
+(sort expr)
+(sort val)
+(fun let_val (-> expr (-> val expr) expr))
+(rule (let_val T (lambda ((x val)) (let_val U (lambda ((y val)) (V x y))))) (let_val U (lambda ((y val)) (let_val T (lambda ((x val)) (V x y))))))

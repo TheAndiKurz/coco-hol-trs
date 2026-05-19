@@ -186,7 +186,7 @@ ruleP = parensP $ stringP "rule" *> void *> (Rule <$> termP <*> termP)
 
 holSystemP :: Parser HOLSystem
 holSystemP = do
-    _ <- void *> stringP "(format higher-order)"
+    _ <- void *> (stringP "(format higher-order)" <|> stringP "(format HRS)")
 
     let parseSorts = do
           isSort <- void *> peekString "(sort"

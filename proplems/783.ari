@@ -1,0 +1,6 @@
+; @cops 784
+(format HRS)
+(sort i)
+(sort o)
+(fun r (-> (-> i o) o))
+(rule (r (lambda ((a i)) (r (lambda ((b i)) (X a b))))) (r (lambda ((a i)) (r (lambda ((b i)) (X b a))))))

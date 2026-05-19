@@ -1,0 +1,9 @@
+; @cops 452
+(format HRS)
+(sort o)
+(fun f (-> (-> o o) o))
+(fun a o)
+(fun g (-> o o))
+(fun h (-> o o))
+(rule (f (lambda ((x o)) (z x))) (z (z a)))
+(rule (g x) (h x))

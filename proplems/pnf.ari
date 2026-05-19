@@ -1,0 +1,21 @@
+; prenex normal form
+; source: van de Pols PhD thesis, page 73
+(format higher-order)
+(sort t)
+(sort f)
+(fun not (-> f f))
+(fun and (-> f f f))
+(fun or (-> f f f))
+(fun forall (-> (-> t f) f))
+(fun exists (-> (-> t f) f))
+(rule (and p (forall (lambda ((x t)) (Q x)))) (forall (lambda ((x t)) (and p (Q x)))))
+(rule (and (forall (lambda ((x t)) (Q x))) p) (forall (lambda ((x t)) (and (Q x) p))))
+(rule (or p (forall (lambda ((x t)) (Q x)))) (forall (lambda ((x t)) (or p (Q x)))))
+(rule (or (forall (lambda ((x t)) (Q x))) p) (forall (lambda ((x t)) (or (Q x) p))))
+(rule (and p (exists (lambda ((x t)) (Q x)))) (exists (lambda ((x t)) (and p (Q x)))))
+(rule (and (exists (lambda ((x t)) (Q x))) p) (exists (lambda ((x t)) (and (Q x) p))))
+(rule (or p (exists (lambda ((x t)) (Q x)))) (exists (lambda ((x t)) (or p (Q x)))))
+(rule (or (exists (lambda ((x t)) (Q x))) p) (exists (lambda ((x t)) (or (Q x) p))))
+(rule (not (forall (lambda ((x t)) (Q x)))) (exists (lambda ((x t)) (not (Q x)))))
+(rule (not (exists (lambda ((x t)) (Q x)))) (forall (lambda ((x t)) (not (Q x)))))
+
