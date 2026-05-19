@@ -1,0 +1,126 @@
+ari-cops/426.ari: PRS left-linear second-order
+ari-cops/427.ari: PRS left-linear second-order
+ari-cops/428.ari: PRS left-linear second-order
+ari-cops/429.ari: PRS left-linear second-order
+ari-cops/430.ari: PRS left-linear second-order
+ari-cops/431.ari: PRS left-linear second-order
+ari-cops/432.ari: PRS second-order
+ari-cops/433.ari: PRS left-linear second-order
+ari-cops/434.ari: PRS left-linear second-order
+ari-cops/435.ari: PRS left-linear
+ari-cops/436.ari: PRS left-linear second-order
+ari-cops/437.ari: PRS left-linear second-order
+ari-cops/438.ari: PRS left-linear second-order
+ari-cops/443.ari: PRS left-linear second-order
+ari-cops/444.ari: PRS left-linear second-order
+ari-cops/445.ari: PRS left-linear
+ari-cops/446.ari: PRS left-linear second-order
+ari-cops/449.ari: PRS left-linear second-order
+ari-cops/452.ari: PRS left-linear second-order
+ari-cops/454.ari: PRS left-linear second-order
+ari-cops/456.ari: PRS left-linear second-order
+ari-cops/457.ari: PRS left-linear second-order
+ari-cops/458.ari: PRS left-linear second-order
+ari-cops/459.ari: PRS left-linear second-order
+ari-cops/460.ari: PRS left-linear second-order
+ari-cops/462.ari: PRS second-order
+ari-cops/463.ari: PRS left-linear second-order
+ari-cops/464.ari: PRS left-linear second-order
+ari-cops/465.ari: PRS left-linear second-order
+ari-cops/466.ari: PRS left-linear second-order
+ari-cops/467.ari: PRS left-linear second-order
+ari-cops/468.ari: PRS left-linear second-order
+ari-cops/469.ari: PRS left-linear second-order
+ari-cops/470.ari: PRS left-linear second-order
+ari-cops/471.ari: PRS left-linear second-order
+ari-cops/472.ari: PRS left-linear second-order
+ari-cops/473.ari: PRS left-linear
+ari-cops/474.ari: PRS left-linear second-order
+ari-cops/475.ari: PRS left-linear second-order
+ari-cops/476.ari: PRS left-linear second-order
+ari-cops/477.ari: PRS left-linear second-order
+ari-cops/478.ari: PRS left-linear second-order
+ari-cops/479.ari: PRS left-linear second-order
+ari-cops/480.ari: PRS left-linear second-order
+ari-cops/481.ari: PRS left-linear
+ari-cops/482.ari: PRS left-linear second-order
+ari-cops/483.ari: PRS left-linear second-order
+ari-cops/484.ari: PRS left-linear second-order
+ari-cops/485.ari: PRS left-linear second-order
+ari-cops/486.ari: PRS left-linear second-order
+ari-cops/487.ari: PRS left-linear second-order
+ari-cops/500.ari: HRS left-linear second-order
+ari-cops/501.ari: PRS left-linear second-order
+ari-cops/513.ari: PRS left-linear second-order
+ari-cops/514.ari: PRS left-linear second-order
+ari-cops/515.ari: PRS left-linear second-order
+ari-cops/516.ari: PRS left-linear second-order
+ari-cops/517.ari: PRS left-linear
+ari-cops/518.ari: PRS left-linear
+ari-cops/519.ari: PRS left-linear second-order
+ari-cops/520.ari: PRS left-linear second-order
+ari-cops/722.ari: PRS second-order
+ari-cops/723.ari: PRS second-order
+ari-cops/724.ari: PRS left-linear second-order
+ari-cops/725.ari: PRS left-linear second-order
+ari-cops/726.ari: PRS left-linear second-order
+ari-cops/727.ari: PRS left-linear second-order
+ari-cops/728.ari: PRS second-order
+ari-cops/729.ari: PRS second-order
+ari-cops/742.ari: HRS left-linear second-order
+ari-cops/743.ari: HRS left-linear second-order
+ari-cops/744.ari: DPRS left-linear second-order
+ari-cops/745.ari: DPRS left-linear second-order
+ari-cops/746.ari: DPRS left-linear second-order
+ari-cops/747.ari: DPRS left-linear second-order
+ari-cops/748.ari: DPRS left-linear second-order
+ari-cops/749.ari: DPRS left-linear second-order
+ari-cops/750.ari: DPRS left-linear second-order
+ari-cops/751.ari: DPRS left-linear second-order
+ari-cops/752.ari: DPRS left-linear second-order
+ari-cops/753.ari: DPRS second-order
+ari-cops/754.ari: DPRS left-linear second-order
+ari-cops/755.ari: HRS left-linear second-order
+ari-cops/757.ari: DPRS left-linear second-order
+ari-cops/758.ari: HRS second-order
+ari-cops/759.ari: PRS left-linear second-order
+ari-cops/764.ari: PRS left-linear second-order
+ari-cops/766.ari: HRS left-linear second-order
+ari-cops/767.ari: HRS second-order
+ari-cops/768.ari: PRS second-order
+ari-cops/769.ari: DPRS second-order
+ari-cops/771.ari: PRS left-linear second-order
+ari-cops/772.ari: PRS left-linear second-order
+ari-cops/773.ari: DPRS left-linear second-order
+ari-cops/774.ari: PRS left-linear second-order
+ari-cops/775.ari: PRS left-linear second-order
+ari-cops/776.ari: PRS left-linear second-order
+ari-cops/777.ari: PRS second-order
+ari-cops/778.ari: PRS second-order
+ari-cops/779.ari: HRS second-order
+ari-cops/780.ari: HRS second-order
+ari-cops/781.ari: PRS left-linear second-order
+ari-cops/782.ari: PRS left-linear second-order
+ari-cops/783.ari: PRS left-linear second-order
+ari-cops/784.ari: DPRS left-linear second-order
+ari-cops/785.ari: DPRS left-linear second-order
+ari-cops/786.ari: HRS second-order
+ari-cops/787.ari: HRS second-order
+ari-cops/788.ari: PRS left-linear second-order
+ari-cops/789.ari: DPRS left-linear second-order
+ari-cops/1037.ari: PRS left-linear second-order
+ari-cops/1165.ari: PRS second-order
+ari-cops/1166.ari: PRS second-order
+ari-cops/diff.ari: PRS left-linear second-order
+ari-cops/fusion-from.ari: DPRS left-linear second-order
+ari-cops/fusion.ari: DPRS left-linear second-order
+ari-cops/fusion2.ari: DPRS left-linear
+ari-cops/hasegawa_linear_lambda_calc.ari: DPRS left-linear second-order
+ari-cops/nm_iwc2025_ex2.ari: DPRS left-linear second-order
+ari-cops/nm_iwc2025_ex3.ari: DPRS left-linear second-order
+ari-cops/nm_iwc2025_ex4.ari: DPRS left-linear second-order
+ari-cops/nnf.ari: PRS left-linear second-order
+ari-cops/pad.ari: HRS second-order
+ari-cops/pnf.ari: PRS left-linear second-order
+ari-cops/round.ari: DPRS left-linear second-order
+ari-cops/sdu.ari: DPRS second-order

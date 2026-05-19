@@ -114,10 +114,11 @@ checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
 
 checkRule system (Rule ruleLeft ruleRight) = do
     typ@(Type _ _) <- getTermType system (functions system) ruleLeft
-    (freeVarsL, flags) <- typeCheckWithFreeVariables system False [] ruleLeft typ
-    (freeVarsR, flags') <- typeCheckWithFreeVariables system True freeVarsL ruleRight typ
+    (freeVarsL, flags) <- typeCheckWithFreeVariables system False [] [] ruleLeft typ
+    (freeVarsL, flags') <- checkFreeVars freeVarsL
+    (freeVarsR, flags'') <- typeCheckWithFreeVariables system True freeVarsL [] ruleRight typ
     if length freeVarsR == 0
-    then return $ flagsCombine flags flags'
+    then return $ foldl flagsCombine flags [flags', flags'']
     else Left $ "rule '" ++ show (ruleLeft, ruleRight)
         ++ "' has free variables in right hand side that do not appear in left-hand side: "
         ++ show freeVarsR
@@ -177,8 +178,8 @@ getTermTypeFreeVariableError term = Left $
 
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
-typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> Term -> Type -> Either String ([Var], Flags)
-typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars) fid of
+typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> [Var] -> Term -> Type -> Either String ([Var], Flags)
+typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars ++ free_vars) fid of
     -- function application type checking
     Just (Var _ (Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
@@ -189,13 +190,9 @@ typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type 
                 (zip args fargs)
                 where 
                     f :: ([Var], Flags) -> (Term, Type) -> Either String ([Var], Flags)
-                    f (free_vars, flags) (term@(Term tid _), typ) = do
-                        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ free_vars) term typ
-                        if tid `elem` map varId free_vars then return (free_vars ++ new_free_vars, flagsCombine flags $ flagsCombine new_flags flagsNotLeftLinear)
-                        else return (free_vars ++ new_free_vars, flagsCombine flags new_flags)
-                    f (vars, flags) (term, typ) = do
-                        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ vars) term typ
-                        return (vars ++ new_free_vars, flagsCombine flags new_flags)
+                    f (new_free_vars_acc, flags) (term, typ) = do
+                        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ new_free_vars_acc) term typ
+                        return (new_free_vars_acc ++ new_free_vars, flagsCombine flags new_flags)
 
     Just (Var _ ft@(Type fargs _)) | length fargs == (length args + length targs) ->
         if ft == typ then
@@ -208,12 +205,12 @@ typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type 
     Nothing | length targs /= 0 -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
     Nothing -> do
         -- fails if the argument is a free variable again, because this cannot infer the type then
-        term_types <- mapM (getTermType system bound_vars) args
+        term_types <- mapM (getTermType system (bound_vars ++ free_vars)) args
         let new_var_type = Type (term_types ++ targs) tid
         let new_var_order = typeOrder new_var_type 
         let new_var = Var fid new_var_type
 
-        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system rhs bound_vars) args term_types
+        (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ [new_var])) args term_types
         let free_vars = concat varss
 
         let base_flags = Flags { left_linear=True
@@ -227,7 +224,7 @@ typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type 
 
     _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
 
-typeCheckWithFreeVariables system rhs bound_vars (TermLambda new_bound_vars body) (Type targs tid)
+typeCheckWithFreeVariables system rhs bound_vars free_vars (TermLambda new_bound_vars body) (Type targs tid)
     | length new_bound_vars > length targs = Left $
         "lambda function with more variables then expected. Expected at most "
         ++ show (length targs) ++ " but got " ++ show (length new_bound_vars)
@@ -241,7 +238,7 @@ typeCheckWithFreeVariables system rhs bound_vars (TermLambda new_bound_vars body
         let body_type = Type (drop (length new_bound_vars) targs) tid
         if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do 
-            (vars, flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ new_bound_vars) body body_type
+            (vars, flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ new_bound_vars) free_vars body body_type
             return $ (vars, flagsCombine flags base_flags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 

@@ -14,18 +14,23 @@ flagsShow (Flags {second_order=so, pattern=prs, left_linear=ll, deterministic_pa
                                               , (so, "second-order") 
                                               ]]
 
+condPrint :: Bool -> String -> IO ()
+condPrint False _ = return ()
+condPrint True s = putStr s
+
 flagAri :: Bool -> String -> IO ()
-flagAri show_unused file_name = do 
+flagAri verbose file_name = do 
     parseResult <- parseSystemFromFile file_name
     case parseResult of
         Left errors -> mapM_ (putStrLn . red . show) errors
         Right system -> do
+            condPrint verbose $ show system
             putStr $ file_name ++ ": "
             case checkSystem system of 
                 Left fail_msg -> putStrLn $ red fail_msg
                 Right (flags, unused_globals) -> do
                     putStrLn $ flagsShow flags
-                    if show_unused && length unused_globals > 0 then do
+                    if verbose && length unused_globals > 0 then do
                         putStrLn $ yellow $ "Unused global variables detected:"
                         mapM_ (putStrLn . yellow . ("  " ++) . show) unused_globals
                     else return ()
