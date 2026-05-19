@@ -69,8 +69,11 @@ instance Eq Var where
 instance Ord Var where
     compare (Var id1 _) (Var id2 _) = compare id1 id2
 
-combineFlags :: Flags -> Flags -> Flags
-combineFlags (Flags ll1 so1 dhs1 prs1) (Flags ll2 so2 dhs2 prs2) = Flags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
+flagsCombine :: Flags -> Flags -> Flags
+flagsCombine (Flags ll1 so1 dhs1 prs1) (Flags ll2 so2 dhs2 prs2) = Flags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
+
+flagsNotLeftLinear :: Flags
+flagsNotLeftLinear = Flags {left_linear=False, second_order=True, deterministic_pattern=True, pattern=True}
  
 sortId :: Sort -> Id
 sortId (Sort id) = id
@@ -86,7 +89,7 @@ checkSystem system = do
     flags <- checkSorts system
     flags' <- checkFunctions system
     flags'' <- checkRules system
-    Right ( combineFlags flags $ combineFlags flags' flags''
+    Right ( flagsCombine flags $ flagsCombine flags' flags''
           , filter (not . \var -> any (varUsedInRule var) (rules system)) (functions system)
           )
 
@@ -103,7 +106,7 @@ checkFunctions system = do
 checkRules :: HOLSystem -> Either String Flags
 checkRules system = do 
   flags <- mapM (checkRule system) $ rules system
-  return $ foldr combineFlags (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags
+  return $ foldr flagsCombine (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags
 
 checkRule :: HOLSystem -> Rule -> Either String Flags
 checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
@@ -112,10 +115,9 @@ checkRule _ rule@(Rule (TermLambda _ _) _) = Left $
 checkRule system (Rule ruleLeft ruleRight) = do
     typ@(Type _ _) <- getTermType system (functions system) ruleLeft
     (freeVarsL, flags) <- typeCheckWithFreeVariables system False [] ruleLeft typ
-    (freeVarsL, flags') <- checkFreeVars freeVarsL
-    (freeVarsR, flags'') <- typeCheckWithFreeVariables system True freeVarsL ruleRight typ
+    (freeVarsR, flags') <- typeCheckWithFreeVariables system True freeVarsL ruleRight typ
     if length freeVarsR == 0
-    then return $ combineFlags flags $ combineFlags flags' flags''
+    then return $ flagsCombine flags flags'
     else Left $ "rule '" ++ show (ruleLeft, ruleRight)
         ++ "' has free variables in right hand side that do not appear in left-hand side: "
         ++ show freeVarsR
@@ -182,8 +184,18 @@ typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type 
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
         then Left $ "term '" ++ show term ++ "' does not have type " ++ show typ
         else do
-            (varss, flags) <- unzip <$> zipWithM (typeCheckWithFreeVariables system rhs bound_vars) args fargs
-            Right $ (concat varss, foldr (combineFlags) (Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) flags)
+            foldM f
+                ([], Flags {left_linear=True, second_order=True, deterministic_pattern=True, pattern=True}) 
+                (zip args fargs)
+                where 
+                    f :: ([Var], Flags) -> (Term, Type) -> Either String ([Var], Flags)
+                    f (free_vars, flags) (term@(Term tid _), typ) = do
+                        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ free_vars) term typ
+                        if tid `elem` map varId free_vars then return (free_vars ++ new_free_vars, flagsCombine flags $ flagsCombine new_flags flagsNotLeftLinear)
+                        else return (free_vars ++ new_free_vars, flagsCombine flags new_flags)
+                    f (vars, flags) (term, typ) = do
+                        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ vars) term typ
+                        return (vars ++ new_free_vars, flagsCombine flags new_flags)
 
     Just (Var _ ft@(Type fargs _)) | length fargs == (length args + length targs) ->
         if ft == typ then
@@ -210,7 +222,7 @@ typeCheckWithFreeVariables system rhs bound_vars term@(Term fid args) typ@(Type 
                                , pattern=checkPattern bound_vars args
                                }
 
-        let flags = foldr (combineFlags) base_flags flagss
+        let flags = foldr (flagsCombine) base_flags flagss
         Right $ (new_var : free_vars, flags)
 
     _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
@@ -230,7 +242,7 @@ typeCheckWithFreeVariables system rhs bound_vars (TermLambda new_bound_vars body
         if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do 
             (vars, flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ new_bound_vars) body body_type
-            return $ (vars, combineFlags flags base_flags)
+            return $ (vars, flagsCombine flags base_flags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 
 checkVars :: String -> HOLSystem -> [Var] -> Either String Order
