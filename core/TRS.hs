@@ -8,7 +8,7 @@ import Control.Monad (zipWithM, foldM)
 import Control.Monad.State
 import qualified Data.Map as Map
 import Utils
-import qualified SMT as SMT
+import qualified SMT as Smt
 
 newtype Id = Id String deriving (Eq, Ord)
 
@@ -377,17 +377,11 @@ duplicate tool (system1, type_classes1) (system2, type_classes2) = do
     case groupTypeClasses type_classes1 type_classes2 of
         Nothing -> return False -- some type_class in first system does not match any other type_class in the other system
         Just function_groups -> do 
-            -- traceM (show system1 ++ "\n\n" ++ show system2 ++ "\n\n" ++ concatMap ((++ "\n") . show) function_groups)
-            
-            -- build the smt solver constraints
-            -- vars for sorts (sorts are distinct and have to match to one sort of the other system)
-            -- vars for every function symbol (all need to be distinct)
-            -- function symbols need to have a counterpart in the typeclass group
-            -- sorts of function symbols need to match
-            -- for the rules?
-            let commands = sortSMT (sorts system1) (sorts system2) ++ functionsSMT function_groups
-            -- putStr $ SMT.showSMTInput commands
-            SMT.check_sat tool commands
+            let commands = sortSmt (sorts system1) (sorts system2) 
+                           ++ functionsSmt function_groups 
+                           ++ [rulesSmt (rules system1) (rules system2)]
+            -- putStr $ Smt.showSmtInput commands
+            Smt.check_sat tool commands
 
 removeUnused :: HOLSystem -> HOLSystem
 removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules, file_name=_file_name}) =
@@ -410,11 +404,15 @@ alphaNormalizeRules HOLSystem {sorts=_sorts, functions=_functions, rules=_rules,
               }
 
 data RenameState = RenameState 
-    { freeVars   :: Map.Map Id Id  -- Maps original free Id to x_i
-    , freeCount  :: Int            -- Counter for x_i
-    , boundCount :: Int            -- Counter for z_i
+    { freeVars   :: Map.Map Id Id  -- Maps original free Id to (x_i)
+    , freeCount  :: Int            -- Counter for (x_i)
+    , boundCount :: Int            -- Counter for (z_i)
     }
 
+
+-- renames free variables to (x_i) and bound variables to (z_i)
+-- including the "()" into this, because parsing this is not allowed and 
+-- checking if it is a variable later is therefore trivial
 alphaNormalizeRule :: (Id -> Bool) -> Rule -> Rule
 alphaNormalizeRule isVar (Rule lhs rhs) = 
     evalState (do
@@ -445,7 +443,7 @@ alphaNormalizeRule isVar (Rule lhs rhs) =
             let c = boundCount st
             put st { boundCount = c + 1 }
             
-            let newId = Id ("z" ++ show c)
+            let newId = Id ("(z_" ++ show c ++ ")")
             let newVar = Var newId typ 
             return (newVar : accVars, Map.insert oldId newId env)
         
@@ -456,7 +454,7 @@ alphaNormalizeRule isVar (Rule lhs rhs) =
                 Just newId -> return newId
                 Nothing -> do
                     let c = freeCount st
-                    let newId = Id ("x" ++ show c)
+                    let newId = Id ("(x" ++ show c ++ ")")
                     put st { freeCount = c + 1
                            , freeVars = Map.insert oldId newId (freeVars st) 
                            }
@@ -501,47 +499,68 @@ typeSameSkeleton (Type args1 _) (Type args2 _)
     | length args1 /= length args2 = False
     | otherwise = all id $ zipWith typeSameSkeleton args1 args2
 
--- SMT
+-- Smt
 var1 :: Id -> String -> String
 var1 id typ = "x_" ++ typ ++ "_" ++ show id
 
 var2 :: Id -> String -> String
 var2 id typ = "y_" ++ typ ++ "_" ++ show id
 
-sortEq :: Sort -> Sort -> SMT.Formula
-sortEq (Sort id1) (Sort id2) = SMT.Eq (SMT.Var $ var1 id1 "s") (SMT.Var $ var2 id2 "s")
+sortEq :: Sort -> Sort -> Smt.Formula
+sortEq (Sort id1) (Sort id2) = Smt.Eq (Smt.Var $ var1 id1 "s") (Smt.Var $ var2 id2 "s")
 
-sortSMT :: [Sort] -> [Sort] -> [SMT.Command]
-sortSMT sorts1 sorts2 = declarations1 ++ declarations2 ++ [distinct_sorts1, distinct_sorts2, one_match]
+sortSmt :: [Sort] -> [Sort] -> [Smt.Command]
+sortSmt sorts1 sorts2 = declarations1 ++ declarations2 ++ [distinct_sorts1, distinct_sorts2, one_match]
   where
-    declarations1 = [ SMT.DeclareInt $ var1 id "s" | Sort id <- sorts1 ]
-    declarations2 = [ SMT.DeclareInt $ var2 id "s" | Sort id <- sorts2 ]
+    declarations1 = [ Smt.DeclareInt $ var1 id "s" | Sort id <- sorts1 ]
+    declarations2 = [ Smt.DeclareInt $ var2 id "s" | Sort id <- sorts2 ]
     
-    distinct_sorts1 = SMT.Assert $ SMT.Distinct [SMT.Var $ var1 id "s" | Sort id <- sorts1]
-    distinct_sorts2 = SMT.Assert $ SMT.Distinct [SMT.Var $ var2 id "s" | Sort id <- sorts2]
+    distinct_sorts1 = Smt.Assert $ Smt.Distinct [Smt.Var $ var1 id "s" | Sort id <- sorts1]
+    distinct_sorts2 = Smt.Assert $ Smt.Distinct [Smt.Var $ var2 id "s" | Sort id <- sorts2]
 
-    one_match = SMT.Assert $ 
-        SMT.conj [ SMT.disj [ sortEq sort1 sort2 | sort2 <- sorts2 ]
+    one_match = Smt.Assert $ 
+        Smt.conj [ Smt.disj [ sortEq sort1 sort2 | sort2 <- sorts2 ]
                  | sort1 <- sorts1
                  ]
-functionsSMT :: [([Var],[Var])] -> [SMT.Command]
-functionsSMT [] = []
-functionsSMT ((funs1, funs2): rest) = declerations1 ++ declerations2 ++ [distinct_funs1, distinct_funs2, one_match] ++ functionsSMT rest
+functionsSmt :: [([Var],[Var])] -> [Smt.Command]
+functionsSmt [] = []
+functionsSmt ((funs1, funs2):rest) = declerations1 ++ declerations2 ++ [distinct_funs1, distinct_funs2, one_match] ++ functionsSmt rest
   where
-    declerations1 = [ SMT.DeclareInt $ var1 id "f" | Var id _ <- funs1]
-    declerations2 = [ SMT.DeclareInt $ var2 id "f" | Var id _ <- funs2]
+    declerations1 = [ Smt.DeclareInt $ var1 id "f" | Var id _ <- funs1]
+    declerations2 = [ Smt.DeclareInt $ var2 id "f" | Var id _ <- funs2]
     
-    distinct_funs1 = SMT.Assert $ SMT.Distinct [SMT.Var $ var1 id "f" | Var id _ <- funs1]
-    distinct_funs2 = SMT.Assert $ SMT.Distinct [SMT.Var $ var2 id "f" | Var id _ <- funs2]
+    distinct_funs1 = Smt.Assert $ Smt.Distinct [Smt.Var $ var1 id "f" | Var id _ <- funs1]
+    distinct_funs2 = Smt.Assert $ Smt.Distinct [Smt.Var $ var2 id "f" | Var id _ <- funs2]
 
-    functionEq :: Var -> Var -> SMT.Formula
-    functionEq (Var id1 typ1) (Var id2 typ2) = SMT.conj $
-        SMT.Eq (SMT.Var $ var1 id1 "f") (SMT.Var $ var2 id2 "f") : zipWith sortEq (typeFlatten typ1) (typeFlatten typ2) 
+    functionEq :: Var -> Var -> Smt.Formula
+    functionEq (Var id1 typ1) (Var id2 typ2) = Smt.conj $
+        Smt.Eq (Smt.Var $ var1 id1 "f") (Smt.Var $ var2 id2 "f") : zipWith sortEq (typeFlatten typ1) (typeFlatten typ2) 
 
-    one_match = SMT.Assert $
-        SMT.conj [SMT.disj [ functionEq fun1 fun2 | fun2 <- funs2 ] 
+    one_match = Smt.Assert $
+        Smt.conj [Smt.disj [ functionEq fun1 fun2 | fun2 <- funs2 ] 
                  | fun1 <- funs1
                  ]
 
+isVariable :: Id -> Bool
+isVariable id
+    | take 1 (show id) == "(" = True
+    | otherwise = False
 
+termsEq :: Term -> Term -> Smt.Formula
+termsEq (Term tid1 args1) (Term tid2 args2) 
+    | isVariable tid1 && isVariable tid2 = Smt.conj argsEq
+    | not (isVariable tid1 || isVariable tid2) = Smt.conj $ funEq : argsEq
+    | otherwise = Smt.bottom
+    where argsEq = zipWith termsEq args1 args2
+          funEq = Smt.Eq (Smt.Var $ var1 tid1 "f") (Smt.Var $ var2 tid2 "f")
 
+termsEq (TermLambda _ body1) (TermLambda _ body2) = termsEq body1 body2
+termsEq _ _ = Smt.bottom
+
+rulesSmt :: [Rule] -> [Rule] -> Smt.Command
+rulesSmt rules1 rules2 = Smt.Assert $ 
+    Smt.conj [ 
+        Smt.disj [
+            Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
+        | Rule lhs2 rhs2 <- rules2 ] 
+    | Rule lhs1 rhs1 <- rules1 ] 
