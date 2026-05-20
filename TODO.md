@@ -6,6 +6,7 @@
 - [x] Pattern (PRS)
 - [x] Deterministic Rewrite Pattern (DHS)
 - [ ] Duplicate checking
+   - [ ] Mode to output model which was mapped. Such that it is easier to reason about what was mapped to what.
 
 ## When time allows
 

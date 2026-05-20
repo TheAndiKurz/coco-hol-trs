@@ -558,9 +558,18 @@ termsEq (TermLambda _ body1) (TermLambda _ body2) = termsEq body1 body2
 termsEq _ _ = Smt.bottom
 
 rulesSmt :: [Rule] -> [Rule] -> Smt.Command
-rulesSmt rules1 rules2 = Smt.Assert $ 
-    Smt.conj [ 
-        Smt.disj [
-            Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
-        | Rule lhs2 rhs2 <- rules2 ] 
-    | Rule lhs1 rhs1 <- rules1 ] 
+rulesSmt rules1 rules2 = Smt.Assert $ Smt.conj (s1s2 ++ s2s1)
+    where 
+        -- every rule in s1 has a corresponding rule in s2
+        s1s2 = [ 
+            Smt.disj [
+                Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
+                | Rule lhs2 rhs2 <- rules2 ] 
+            | Rule lhs1 rhs1 <- rules1 ] 
+
+        -- every rule in s2 has a corresponding rule in s1
+        s2s1 = [ 
+            Smt.disj [
+                Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
+                | Rule lhs1 rhs1 <- rules1 ] 
+            | Rule lhs2 rhs2 <- rules2 ] 
