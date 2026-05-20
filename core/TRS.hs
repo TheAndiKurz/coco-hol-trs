@@ -7,8 +7,8 @@ import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Control.Monad.State
 import qualified Data.Map as Map
-import Debug.Trace (trace)
 import Utils
+import qualified SMT as SMT
 
 newtype Id = Id String deriving (Eq, Ord)
 
@@ -44,10 +44,11 @@ data HOLSystem = HOLSystem
   { sorts     :: [Sort]
   , functions :: [Var]
   , rules     :: [Rule]
+  , file_name :: String
   }
 
 instance Show HOLSystem where
-    show (HOLSystem sorts functions rules) = 
+    show (HOLSystem sorts functions rules _) = 
       unlines $ (map show sorts) ++ (map show functions) ++ (map show rules)
 
 type Order = Int
@@ -274,6 +275,10 @@ typeOrder :: Type -> Order
 typeOrder (Type [] _) = 1
 typeOrder (Type types _) = 1 + (maximum $ map typeOrder types)
 
+typeFlatten :: Type -> [Sort]
+typeFlatten (Type [] s) = [Sort s]
+typeFlatten (Type args s) = concatMap typeFlatten args ++ [Sort s]
+
 
 -- DHS Deterministic higher-order rewrite patterns
 checkDeterministicPattern :: HOLSystem -> [Var] -> [Term] -> Bool
@@ -362,28 +367,30 @@ preProcessSystemDuplicates system =
     let system' = alphaNormalizeRules $ removeUnused system in
     (system', varsDevideIntoTypeClasses $ functions system')
 
--- should use preProcessSystemDuplicates before calling this function
-duplicate :: (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> Bool
-duplicate (system1, type_classes1) (system2, type_classes2) =
+duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO Bool
+duplicate tool (system1, type_classes1) (system2, type_classes2) = do
     if length (functions system1) /= length (functions system2) ||
        length (sorts system1) /= length (sorts system2) || 
        length type_classes1 /= length type_classes2
-    then False else
+    then return False else do
 
     case groupTypeClasses type_classes1 type_classes2 of
-        Nothing -> False -- some type_class in first system does not match any other type_class in the other system
-        Just groups -> 
-            trace (show system1 ++ "\n\n" ++ show system2 ++ "\n\n" ++ concatMap ((++ "\n") . show) groups)
+        Nothing -> return False -- some type_class in first system does not match any other type_class in the other system
+        Just function_groups -> do 
+            -- traceM (show system1 ++ "\n\n" ++ show system2 ++ "\n\n" ++ concatMap ((++ "\n") . show) function_groups)
+            
             -- build the smt solver constraints
             -- vars for sorts (sorts are distinct and have to match to one sort of the other system)
-            -- vars for every function symbol
+            -- vars for every function symbol (all need to be distinct)
             -- function symbols need to have a counterpart in the typeclass group
             -- sorts of function symbols need to match
             -- for the rules?
-            True
+            let commands = sortSMT (sorts system1) (sorts system2) ++ functionsSMT function_groups
+            -- putStr $ SMT.showSMTInput commands
+            SMT.check_sat tool commands
 
 removeUnused :: HOLSystem -> HOLSystem
-removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules}) =
+removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules, file_name=_file_name}) =
     let 
         filtered_functions = [function | function <- _functions, any (varUsedInRule function) _rules]
         filtered_sorts = [sort | sort <- _sorts, any (sortUsedInType sort) $ map varType filtered_functions]
@@ -391,13 +398,15 @@ removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules}) =
     HOLSystem { sorts=filtered_sorts
               , functions=filtered_functions
               , rules=nub _rules
+              , file_name=_file_name
               }
 
 alphaNormalizeRules :: HOLSystem -> HOLSystem
-alphaNormalizeRules HOLSystem {sorts=_sorts, functions=_functions, rules=_rules} = 
+alphaNormalizeRules HOLSystem {sorts=_sorts, functions=_functions, rules=_rules, file_name=_file_name} = 
     HOLSystem { sorts=_sorts
               , functions=_functions
               , rules=map (alphaNormalizeRule (\id -> not (elem id $ map varId _functions))) _rules
+              , file_name=_file_name
               }
 
 data RenameState = RenameState 
@@ -491,3 +500,48 @@ typeSameSkeleton :: Type -> Type -> Bool
 typeSameSkeleton (Type args1 _) (Type args2 _)
     | length args1 /= length args2 = False
     | otherwise = all id $ zipWith typeSameSkeleton args1 args2
+
+-- SMT
+var1 :: Id -> String -> String
+var1 id typ = "x_" ++ typ ++ "_" ++ show id
+
+var2 :: Id -> String -> String
+var2 id typ = "y_" ++ typ ++ "_" ++ show id
+
+sortEq :: Sort -> Sort -> SMT.Formula
+sortEq (Sort id1) (Sort id2) = SMT.Eq (SMT.Var $ var1 id1 "s") (SMT.Var $ var2 id2 "s")
+
+sortSMT :: [Sort] -> [Sort] -> [SMT.Command]
+sortSMT sorts1 sorts2 = declarations1 ++ declarations2 ++ [distinct_sorts1, distinct_sorts2, one_match]
+  where
+    declarations1 = [ SMT.DeclareInt $ var1 id "s" | Sort id <- sorts1 ]
+    declarations2 = [ SMT.DeclareInt $ var2 id "s" | Sort id <- sorts2 ]
+    
+    distinct_sorts1 = SMT.Assert $ SMT.Distinct [SMT.Var $ var1 id "s" | Sort id <- sorts1]
+    distinct_sorts2 = SMT.Assert $ SMT.Distinct [SMT.Var $ var2 id "s" | Sort id <- sorts2]
+
+    one_match = SMT.Assert $ 
+        SMT.conj [ SMT.disj [ sortEq sort1 sort2 | sort2 <- sorts2 ]
+                 | sort1 <- sorts1
+                 ]
+functionsSMT :: [([Var],[Var])] -> [SMT.Command]
+functionsSMT [] = []
+functionsSMT ((funs1, funs2): rest) = declerations1 ++ declerations2 ++ [distinct_funs1, distinct_funs2, one_match] ++ functionsSMT rest
+  where
+    declerations1 = [ SMT.DeclareInt $ var1 id "f" | Var id _ <- funs1]
+    declerations2 = [ SMT.DeclareInt $ var2 id "f" | Var id _ <- funs2]
+    
+    distinct_funs1 = SMT.Assert $ SMT.Distinct [SMT.Var $ var1 id "f" | Var id _ <- funs1]
+    distinct_funs2 = SMT.Assert $ SMT.Distinct [SMT.Var $ var2 id "f" | Var id _ <- funs2]
+
+    functionEq :: Var -> Var -> SMT.Formula
+    functionEq (Var id1 typ1) (Var id2 typ2) = SMT.conj $
+        SMT.Eq (SMT.Var $ var1 id1 "f") (SMT.Var $ var2 id2 "f") : zipWith sortEq (typeFlatten typ1) (typeFlatten typ2) 
+
+    one_match = SMT.Assert $
+        SMT.conj [SMT.disj [ functionEq fun1 fun2 | fun2 <- funs2 ] 
+                 | fun1 <- funs1
+                 ]
+
+
+

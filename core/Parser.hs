@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE ViewPatterns      #-}
 {-# LANGUAGE FlexibleInstances      #-}
 
@@ -205,7 +206,7 @@ holSystemP = do
 
     rules <- parseRules
 
-    return $ HOLSystem sorts functions rules
+    return $ HOLSystem sorts functions rules ""
 
 parseSystem :: String -> Either [ParseError] HOLSystem
 parseSystem content = 
@@ -218,5 +219,10 @@ parseSystemFromFile file_name = do
     content <- readFile file_name
     return $ case runParser holSystemP $ newInput file_name content of
         Left err -> Left err
-        Right (_, system) -> Right system
+        Right (_, system) -> Right 
+            HOLSystem { file_name=file_name
+                      , sorts=sorts system
+                      , rules=rules system
+                      , functions=functions system
+                      }
 

@@ -14,7 +14,8 @@ library core-lib
     exposed-modules:    Parser
                         TRS
     other-modules:      Utils
-    build-depends: mtl, containers
+                        SMT
+    build-depends: mtl, containers, process
 
 executable flaging
     import:             shared-properties
