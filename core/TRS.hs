@@ -104,8 +104,9 @@ checkSorts system = case firstDuplicate (sorts system) of
 
 checkFunctions :: HOLSystem -> Either String Flags
 checkFunctions system = do
-    order <- checkVars "function" system (functions system)
-    return $ Flags {left_linear=True, second_order=(order <= 3), deterministic_pattern=True, pattern=True}
+    duplicateVarsCheck "function" $ functions system
+    let max_order = maximum $ map (typeOrder . varType) $ functions system
+    return $ Flags {left_linear=True, second_order=(max_order <= 3), deterministic_pattern=True, pattern=True}
 
 checkRules :: HOLSystem -> Either String Flags
 checkRules system = do 
@@ -159,7 +160,7 @@ varUsedInTerm var@(Var vid _) (Term tid args)
     | otherwise = any (varUsedInTerm var) args
 
 getTermType :: HOLSystem -> [Var] -> Term -> Either String Type
-getTermType system bound_vars term@(Term id args) = case findVar (functions system ++ bound_vars) id of
+getTermType system bound_vars term@(Term id args) = case findVar (bound_vars ++ functions system) id of
     Just (Var _ (Type fargs _)) | length fargs /= length args ->
         Left $ "function '" ++ show id ++ "' expects " ++ show (length fargs)
             ++ " arguments, but got " ++ show (length args) ++ "."
@@ -168,11 +169,10 @@ getTermType system bound_vars term@(Term id args) = case findVar (functions syst
     Nothing -> getTermTypeFreeVariableError term
 
 getTermType system vars (TermLambda newVars body) = do
-    -- no shadowing and no duplicates allowed
-    _ <- checkVars "variable" system (vars ++ newVars)
+    duplicateVarsCheck "variable" newVars
 
     let newVarTypes = map varType newVars
-    (Type bargs ret) <- getTermType system (vars ++ newVars) body
+    (Type bargs ret) <- getTermType system (newVars ++ vars) body
     return $ Type (newVarTypes ++ bargs) ret
 
 getTermTypeFreeVariableError :: Term -> Either String Type
@@ -183,7 +183,7 @@ getTermTypeFreeVariableError term = Left $
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
 typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> [Var] -> Term -> Type -> Either String ([Var], Flags)
-typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (functions system ++ bound_vars) fid of
+typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (bound_vars ++ functions system) fid of
     -- function application type checking
     Just (Var _ (Type fargs ftid)) | length fargs == length args -> do
         if not $ sameTypes (drop (length args) fargs) targs && ftid == tid
@@ -236,7 +236,7 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars (TermLambda new_bound
         ++ show (length targs) ++ " but got " ++ show (length new_bound_vars)
     | otherwise = do
         -- no shadowing and no duplicates
-        _ <- checkVars "lambda function variable" system (bound_vars ++ new_bound_vars)
+        duplicateVarsCheck "lambda function variable" new_bound_vars
 
         let max_order = maximum $ map (typeOrder . varType) new_bound_vars
         let base_flags = Flags {left_linear=True, second_order=max_order <= 1, deterministic_pattern=True, pattern=True}
@@ -244,14 +244,14 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars (TermLambda new_bound
         let body_type = Type (drop (length new_bound_vars) targs) tid
         if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do 
-            (vars, flags) <- typeCheckWithFreeVariables system rhs (bound_vars ++ new_bound_vars) free_vars body body_type
+            (vars, flags) <- typeCheckWithFreeVariables system rhs (new_bound_vars ++ bound_vars) free_vars body body_type
             return $ (vars, flagsCombine flags base_flags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 
-checkVars :: String -> HOLSystem -> [Var] -> Either String Order
-checkVars desc system vars = case firstDuplicate vars of
-    Just (Var id _) -> Left $ "every " ++ desc ++ " has to have a unique name and cannot be shadowed. Duplicated variable name: " ++ show id
-    Nothing -> foldM (\order var -> (max order) <$> checkType system (varType var)) 1 $ functions system
+duplicateVarsCheck :: String -> [Var] -> Either String ()
+duplicateVarsCheck desc vars = case firstDuplicate vars of
+    Just (Var id _) -> Left $ "every " ++ desc ++ " has to have a unique name. Duplicated variable name: " ++ show id
+    Nothing -> return ()
 
 sameTypes :: [Type] -> [Type] -> Bool
 sameTypes ts1 ts2

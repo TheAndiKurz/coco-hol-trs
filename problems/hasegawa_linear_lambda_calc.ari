@@ -1,6 +1,6 @@
 ; Hasegawas simpler linear lambda calculus (untyped variant)
 ; source: Hamana JFP 2019
-(format higher-order)
+(format HRS)
 (sort t)
 (fun app (-> t t t))
 (fun lam (-> (-> t t) t))

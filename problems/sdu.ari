@@ -1,6 +1,6 @@
 ; surjective disjoint union
 ; source: van de Pols PhD thesis, page 74
-(format higher-order)
+(format HRS)
 (sort a)
 (sort b)
 (sort u)

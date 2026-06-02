@@ -1,6 +1,6 @@
 ; prenex normal form
 ; source: van de Pols PhD thesis, page 73
-(format higher-order)
+(format HRS)
 (sort t)
 (sort f)
 (fun not (-> f f))

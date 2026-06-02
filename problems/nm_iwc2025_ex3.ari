@@ -1,7 +1,7 @@
 ; @author Johannes Niederhauser
 ; basic DPRS critical pair example
 ; source: Niederhauser & Middeldorp IWC 2025
-(format higher-order)
+(format HRS)
 (sort a)
 (fun c (-> (-> a a) a))
 (fun d a)

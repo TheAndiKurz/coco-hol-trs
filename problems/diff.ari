@@ -1,6 +1,6 @@
 ; differentiation
 ; source: extension of Example 3.4 in Jouannaud & Rubio ACM Trans. Com. Log. 2015
-(format higher-order)
+(format HRS)
 (sort real)
 (fun zero real)
 (fun one real)

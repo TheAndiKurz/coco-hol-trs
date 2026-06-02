@@ -1,6 +1,6 @@
 ; negational normal form
 ; source: Mayr & Nipkow TCS 1998
-(format higher-order)
+(format HRS)
 (sort t)
 (sort f)
 (fun not (-> f f))

@@ -1,5 +1,5 @@
 ; @author Johannes Niederhauser
-(format higher-order)
+(format HRS)
 (sort int)
 (sort double)
 (sort bool)

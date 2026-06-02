@@ -1,7 +1,7 @@
 ; @author Johannes Niederhauser
 ; basic fusion transformation rule
 ; source: original DHP paper, adapted to DPRS
-(format higher-order)
+(format HRS)
 (sort a)
 (sort la)
 (fun s (-> a a))

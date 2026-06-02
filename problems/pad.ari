@@ -1,6 +1,6 @@
 ; process algebra with data
 ; source: van de Pols PhD thesis, page 75
-(format higher-order)
+(format HRS)
 (sort proc)
 (sort data)
 (fun plus (-> proc proc proc))
