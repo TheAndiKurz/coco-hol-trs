@@ -5,13 +5,14 @@
 - [x] second-order
 - [x] Pattern (PRS)
 - [x] Deterministic Rewrite Pattern (DHS)
-- [ ] Duplicate checking
-   - [ ] Mode to output model which was mapped. Such that it is easier to reason about what was mapped to what.
+- [x] Duplicate checking
+- [x] Shadowing of variables
 
 ## When time allows
 
 - [ ] Checking Error, with location of the input to an adequate Error with position 
 - [ ] Show why Flag is False
+- [ ] Show duplicate model
 
 # Questions
 
