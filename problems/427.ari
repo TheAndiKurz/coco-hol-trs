@@ -1,4 +1,5 @@
 ; @cops 427
+; http://www.cs.vu.nl/~femke/ps/examples.ps p. 8
 (format HRS)
 (sort T)
 (sort F)

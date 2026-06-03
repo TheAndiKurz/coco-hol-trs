@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1305/ndjfl/1093883461
 ; @cops 768
+; [140] p. 265
 (format HRS)
 (sort a)
 (sort b)

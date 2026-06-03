@@ -1,4 +1,7 @@
+; @author Julian Nagele
+; @doi 10.1007/978-3-319-08918-8_24
 ; @cops 729
+; [128] Definition 4 extended with explicit beta and eta rules
 (format HRS)
 (sort term)
 (sort stream)

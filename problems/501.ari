@@ -1,4 +1,5 @@
 ; @cops 501
+; variation of rules in [136]
 (format HRS)
 (sort term)
 (fun abs (-> (-> term term) term))

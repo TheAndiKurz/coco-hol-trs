@@ -1,3 +1,4 @@
+; @author Makoto Hamana
 ; @cops 755
 (format HRS)
 (sort N)

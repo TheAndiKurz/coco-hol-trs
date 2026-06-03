@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 779
+; [145] subsystem of Definition 2.4; part of Cops #780
 (format HRS)
 (sort a)
 (sort b)

@@ -1,4 +1,5 @@
 ; @cops 428
+; [82] p. 6
 (format HRS)
 (sort nat)
 (fun 0 nat)

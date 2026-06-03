@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 747
+; simply-typed lambda calculus with beta/eta in the style of [137,138]
 (format HRS)
 (sort a)
 (sort b)

@@ -1,4 +1,5 @@
-; @copps 754
+; @author Makoto Hamana
+; @cops 754
 (format HRS)
 (sort var)
 (sort real)

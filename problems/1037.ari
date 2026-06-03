@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 1037
+; correction of COPS #756
 (format HRS)
 (sort nat)
 (sort var)

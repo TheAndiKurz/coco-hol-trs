@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/3-540-56939-1_109
 ; @cops 752
+; [131] Section 3.3 (subsystem)
 (format HRS)
 (sort A)
 (sort B)

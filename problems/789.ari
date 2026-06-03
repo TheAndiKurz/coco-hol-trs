@@ -1,4 +1,6 @@
+; @author Kentaro Kikuchi
 ; @cops 789
+; [142] Definition 3.4 without Beta rule
 (format HRS)
 (sort var)
 (sort term)

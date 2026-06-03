@@ -1,4 +1,5 @@
 ; @cops 432
+; http://www.cs.vu.nl/~femke/ps/examples.ps p. 3
 (format HRS)
 (sort T)
 (fun abs (-> (-> T T) T))

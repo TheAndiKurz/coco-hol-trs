@@ -1,4 +1,7 @@
+; @author Julian Nagele
+; @doi 10.1007/978-3-642-24364-6_11
 ; @cops 486
+; [100] Example 13
 (format HRS)
 (sort nat)
 (fun 0 nat)

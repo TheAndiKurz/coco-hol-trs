@@ -1,4 +1,5 @@
 ; @cops 434
+; http://www.cs.vu.nl/~femke/ps/examples.ps p. 13
 (format HRS)
 (sort nat)
 (sort natlist)

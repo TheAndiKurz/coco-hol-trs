@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1017/S096012951600027X
 ; @cops 788
+; [143] subsystem (with correction) of Figure 11; part of Cops #776
 (format HRS)
 (sort G)
 (sort Ar<G_G>)

@@ -1,4 +1,5 @@
 ; @cops 517
+; [127] p. 209 ignoring types
 (format HRS)
 (sort a)
 (fun nil a)

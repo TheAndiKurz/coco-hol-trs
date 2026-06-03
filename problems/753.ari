@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/3-540-58233-9_14
 ; @cops 753
+; [134] Section 6.3 (variant)
 (format HRS)
 (sort A)
 (sort B)

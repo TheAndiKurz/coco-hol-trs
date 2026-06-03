@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/11805618_13
 ; @cops 749
+; [132] Section 3.2 with (com2) and (com4)
 (format HRS)
 (sort a)
 (sort b)

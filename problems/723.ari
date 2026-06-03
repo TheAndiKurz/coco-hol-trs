@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 723
+; variation of example from Klop [14]
 (format HRS)
 (sort o)
 (fun f (-> o o o))

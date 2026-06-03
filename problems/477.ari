@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 477
+; [98] Example 20
 (format HRS)
 (sort int)
 (sort list)

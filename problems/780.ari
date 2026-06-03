@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 780
+; [145] Definition 2.4
 (format HRS)
 (sort a)
 (sort b)

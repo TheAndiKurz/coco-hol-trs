@@ -1,4 +1,5 @@
 ; @cops 500
+; untyped lambda calculus with mini beta
 (format HRS)
 (sort term)
 (fun abs (-> (-> term term) term))

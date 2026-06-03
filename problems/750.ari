@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/11805618_13
 ; @cops 750
+; [132] Section 3.2 without commuting conversions
 (format HRS)
 (sort a)
 (sort b)

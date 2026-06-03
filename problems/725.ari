@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 725
+; [85] p. 63
 (format HRS)
 (sort nat)
 (sort natlist)
@@ -14,7 +16,7 @@
 (rule (map (lambda ((x nat)) (F x)) nil) nil)
 (rule (map (lambda ((x nat)) (F x)) (cons h t)) (cons (at (lambda ((x nat)) (F x)) h) (map (lambda ((x nat)) (F x)) t)))
 (rule (pow (lambda ((x nat)) (F x)) 0 y) (L (lambda ((x nat)) x) y))
-(rule (pow (lambda ((x nat)) (F x)) (s z) y) (op (lambda ((x nat)) (F x)) (lambda ((z nat)) (pow (lambda ((x nat)) (F x)) (s z) z)) y))
+(rule (pow (lambda ((x nat)) (F x)) (s z) y) (op (lambda ((x nat)) (F x)) (lambda ((w nat)) (pow (lambda ((x nat)) (F x)) (s z) w)) y))
 (rule (op (lambda ((x nat)) (F x)) (lambda ((x nat)) (G x)) y) (at (lambda ((x nat)) (F x)) (at (lambda ((x nat)) (G x)) y)))
 (rule (L (lambda ((z nat)) (at (lambda ((x nat)) (F x)) z)) y) (F y))
 (rule (L (lambda ((z nat)) (op (lambda ((x nat)) (F x)) (lambda ((x nat)) (G x)) z)) y) (op (lambda ((x nat)) (F x)) (lambda ((x nat)) (G x)) y))

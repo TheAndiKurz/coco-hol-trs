@@ -1,6 +1,5 @@
 ; @author Johannes Niederhauser
-; basic fusion transformation rule
-; source: original DHP paper, adapted to DPRS
+; sumsq + from
 (format HRS)
 (sort a)
 (sort la)
@@ -14,7 +13,9 @@
 (fun foldr2 (-> (-> a a a) a la a))
 (fun comp (-> (-> la a) (-> la la) la a))
 (fun check (-> (-> a la a) la la a))
+(fun from (-> a la))
 (rule (sum nil) 0)
 (rule (sum (cons x xs)) (plus x (sum xs)))
-(rule (comp (lambda ((x la)) (sum la)) (lambda ((z la)) (foldr1 (lambda ((x a) (y la)) (G x y)) e z)) w) (check (lambda ((x a) (y la)) (sum (G x y))) e w))
-(rule (check (lambda ((x a) (y la)) (F x (sum y))) e w) (foldr2 (lambda ((x a) (y a)) (F x y)) (sum e) w))
+(rule (comp (lambda ((x la)) (sum x)) (lambda ((z la)) (foldr1 (lambda ((x a) (y la)) (G x y)) e z)) xs) (check (lambda ((x a) (y la)) (sum (G x y))) e xs))
+(rule (check (lambda ((x a) (y la)) (F x (sum y))) e xs) (foldr2 (lambda ((x a) (y a)) (F x y)) (sum e) xs))
+(rule (from x) (cons x (from (s x))))

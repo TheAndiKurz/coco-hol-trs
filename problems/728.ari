@@ -1,4 +1,7 @@
+; @author Julian Nagele
+; @doi 10.1007/978-3-319-08918-8_24
 ; @cops 728
+; [128] Definition 4
 (format HRS)
 (sort term)
 (sort stream)

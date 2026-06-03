@@ -1,4 +1,5 @@
 ; @cops 433
+; http://www.cs.vu.nl/~femke/ps/examples.ps p. 12
 (format HRS)
 (sort R)
 (fun min (-> R R))

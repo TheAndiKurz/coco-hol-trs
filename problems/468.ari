@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 468
+; addition on natural numbers via recursor and directly
 (format HRS)
 (sort nat)
 (fun 0 nat)

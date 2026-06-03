@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 726
+; [85] p. 153
 (format HRS)
 (sort nat)
 (fun 0 nat)

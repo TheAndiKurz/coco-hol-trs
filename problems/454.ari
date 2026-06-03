@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 454
+; [84] Example 11.6.42
 (format HRS)
 (sort o)
 (fun f (-> o o))

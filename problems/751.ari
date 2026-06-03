@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/11805618_13
 ; @cops 751
+; [132] Remark 2
 (format HRS)
 (sort a)
 (sort b)

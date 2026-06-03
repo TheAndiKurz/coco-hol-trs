@@ -1,4 +1,5 @@
 ; @cops 517
+; [127] p. 209 without rank 2 polymorphism
 (format HRS)
 (sort a)
 (sort b)

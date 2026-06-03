@@ -1,4 +1,6 @@
+; @doi 10.1016/S0304-3975(98)00078-4
 ; @cops 429
+; [83] Example 1 without rules for max and min
 (format HRS)
 (sort nat)
 (sort natlist)

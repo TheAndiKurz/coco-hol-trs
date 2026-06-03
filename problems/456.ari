@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 456
+; [105] adapted from Example 3.4.22
 (format HRS)
 (sort term)
 (fun 0 term)

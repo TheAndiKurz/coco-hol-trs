@@ -1,4 +1,5 @@
 ; @cops 514
+; adapted from http://www.cs.vu.nl/~femke/ps/examples.ps
 (format HRS)
 (sort R)
 (fun - (-> R R))

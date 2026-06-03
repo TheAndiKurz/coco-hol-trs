@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 769
+; [82] Section 5.1.2.2
 (format HRS)
 (sort A)
 (sort B)

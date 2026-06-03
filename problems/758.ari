@@ -1,4 +1,7 @@
+; @author Makoto Hamana
+; @doi 10.1007/3-540-58233-9_14
 ; @cops 758
+; [134] Section 6.1
 (format HRS)
 (sort data)
 (sort proc)

@@ -1,4 +1,5 @@
 ; @cops 436
+; [107] Definition 2.5 without garbage collection rule
 (format HRS)
 (sort term)
 (fun abs (-> (-> term term) term))

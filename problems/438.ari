@@ -1,4 +1,6 @@
+; @doi 10.1007/978-3-540-70590-1_21
 ; @cops 437
+; [108] p. 318 last rule
 (format HRS)
 (sort term)
 (fun sub (-> (-> term term) term term))

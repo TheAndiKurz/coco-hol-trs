@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 771
+; full experiments for [35], adaptation
 (format HRS)
 (sort nat)
 (fun + (-> nat nat nat))

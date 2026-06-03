@@ -1,4 +1,6 @@
+; @author Kentaro Kikuchi
 ; @cops 773
+; [142] Definition 3.4
 (format HRS)
 (sort var)
 (sort term)

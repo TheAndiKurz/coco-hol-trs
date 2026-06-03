@@ -1,4 +1,6 @@
+; @author Julian Nagele
 ; @cops 724
+; [85] p. 54
 (format HRS)
 (sort o)
 (fun f' (-> (-> o o) o))

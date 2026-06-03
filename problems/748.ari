@@ -1,4 +1,6 @@
+; @author Makoto Hamana
 ; @cops 748
+; simply-typed lambda calculus with binary products in the style of [137,138]
 (format HRS)
 (sort a)
 (sort b)

@@ -1,4 +1,7 @@
+; @author Kentaro Kikuchi
+; @doi 10.2178/jsl/1230396755
 ; @cops 784
+; [148] p. 920
 (format HRS)
 (sort var)
 (sort term)

@@ -1,4 +1,7 @@
+; @author Kentaro Kikuchi
+; @doi 10.29007/7q54
 ; @cops 772
+; [141] Example 5
 (format HRS)
 (sort term)
 (sort form)

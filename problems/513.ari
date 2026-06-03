@@ -1,4 +1,5 @@
 ; @cops 513
+; adapted from [88]
 (format HRS)
 (sort T)
 (sort F)
