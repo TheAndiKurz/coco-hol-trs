@@ -1,6 +1,0 @@
-./problems/515.ari
-./problems/516.ari
-./problems/517.ari
-./problems/518.ari
-./problems/725.ari
-./problems/fusion2.ari
