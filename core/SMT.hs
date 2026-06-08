@@ -1,9 +1,12 @@
 module SMT where
+
 import System.Process
 import Data.List
 import Data.Either
 import System.IO
 import Data.Char
+import Text.ParserCombinators.Parsec
+
 
 data Exp =
     Var String
@@ -35,6 +38,10 @@ data Command =
   | Reset
 
 type SMTInput = [Command]
+
+type Model = [(String, Int)]
+
+type SMTOutput = Maybe Model
 
 -- Escape/unescape functions for identifiers in SMT solvers.
 
@@ -179,6 +186,91 @@ ite f e1 e2 = Ite f e1 e2
 times01 :: Formula -> Exp -> Exp
 times01 f e = ite f e (Val 0)
 
+-- Parsing outputs of SMT solvers.
+
+keyword :: String -> Parser ()
+keyword s = do
+  spaces
+  _ <- string s
+  spaces
+
+parse_var :: Parser String
+parse_var = do
+  spaces
+  s <- many1 (noneOf " \n\r\t\0,()")
+  spaces
+  return (unescape s)
+
+parse_negative :: Parser Int
+parse_negative = do
+  keyword "("
+  keyword "-"
+  t <- many1 digit
+  keyword ")"
+  return (- (read t :: Int))
+
+parse_nonnegative :: Parser Int
+parse_nonnegative = do
+  spaces
+  t <- many1 digit
+  spaces
+  return (read t :: Int)
+
+parseInt :: Parser Int
+parseInt = do
+  i <- parse_negative <|> parse_nonnegative
+  return i
+
+parse_true :: Parser Int
+parse_true = do
+  keyword "true"
+  return 1
+
+parse_false :: Parser Int
+parse_false = do
+  keyword "false"
+  return 0
+
+parse_bool :: Parser Int
+parse_bool = parse_true <|> parse_false
+
+parse_value :: Parser Int
+parse_value = try parse_bool <|> try parseInt
+
+parse_pair :: Parser (String, Int)
+parse_pair = do
+  keyword "("
+  x <- parse_var
+  y <- parse_value
+  keyword ")"
+  return (x, y)
+
+parse_model :: Parser Model
+parse_model = do
+  keyword "("
+  m <- many parse_pair
+  keyword ")"
+  return m
+
+parse_sat :: Parser SMTOutput
+parse_sat = do
+  keyword "sat"
+  m <- option [] parse_model
+  eof
+  return (Just m)
+
+parse_unsat :: Parser SMTOutput
+parse_unsat = do
+  keyword "unsat"
+  -- here we have an error message because (get-value ..) fails.
+  -- so we should not put 'eof'
+  return Nothing
+
+parse_smt_output :: Parser SMTOutput
+parse_smt_output = do
+  m <- try parse_sat <|> parse_unsat
+  return m
+
 -- Evaluation functions.
 
 distinct :: Eq a => [a] -> Bool
@@ -226,3 +318,30 @@ check_sat tool input = do
   hClose hin
   s <- hGetContents hout
   return $ s == "sat\n"
+
+run :: String -> SMTInput -> IO SMTOutput
+run tool input = do
+  (Just hin, Just hout, _, _) <- createProcess (proc tool ["/dev/stdin"]) {
+    std_in = CreatePipe,
+    std_out = CreatePipe }
+  hPutStr hin (showSMTInput input)
+  hClose hin
+  s <- hGetContents hout
+  case parse parse_smt_output "(stdin)" s of
+    Left e  -> do
+      hClose hout
+      putStrLn (showSMTInput input)
+      putStrLn s
+      error (show e)
+    Right m -> do
+      hClose hout
+      return m
+
+
+sat :: String -> Formula -> IO SMTOutput
+sat smt f =
+  run smt (ints ++ bools ++ [Assert f, CheckSat, GetValue (xs ++ bs)])
+  where 
+    (xs, bs) = variables f
+    ints  = [ DeclareInt x | x <- xs ]
+    bools = [ DeclareBool b | b <- bs ]

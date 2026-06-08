@@ -5,7 +5,6 @@ import Parser
 import System.Environment (getArgs)
 import Data.List (nub, tails)
 import Data.Either (partitionEithers)
-import Control.Monad (filterM)
 
 main :: IO ()
 main = do
@@ -22,10 +21,12 @@ main = do
                        | (s1:rest) <- tails preprocessed_systems
                        , s2 <- rest 
                        ]
-    duplicate_systems <- filterM (uncurry $ duplicate "z3") system_pairs
-    let duplicate_systems_file_names = map (\((s1,_), (s2,_)) -> (file_name s1, file_name s2)) duplicate_systems
+    duplicate_results <- mapM (\s -> (,) s <$> uncurry (duplicate "z3") s) system_pairs
+    let duplicate_systems = [ (pair, model) | (pair, Just model) <- duplicate_results ]
 
-    mapM_ (putStrLn . (\(fn1, fn2) -> fn1 ++ " =?= " ++ fn2)) duplicate_systems_file_names
+    let duplicate_systems_file_names = map (\(((s1,_), (s2,_)), model) -> (file_name s1, file_name s2, model)) duplicate_systems
+
+    mapM_ (putStrLn . (\(fn1, fn2, model) -> fn1 ++ " =?= " ++ fn2 ++ "\n\n" ++ show model ++ "\n\n")) duplicate_systems_file_names
     return ()
 
 

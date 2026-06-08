@@ -2,13 +2,14 @@
 {-# LANGUAGE DoAndIfThenElse      #-}
 
 module TRS where
-import Data.List (nub, sort)
+import Data.List (nub, sort, partition, groupBy, sortOn)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
 import Control.Monad.State
 import qualified Data.Map as Map
 import Utils
 import qualified SMT as Smt
+import Data.Function
 
 newtype Id = Id String deriving (Eq, Ord)
 
@@ -367,22 +368,55 @@ preProcessSystemDuplicates system =
     let system' = alphaNormalizeRules $ removeUnused system in
     (system', varsDevideIntoTypeClasses $ functions system')
 
-duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO Bool
+data Mappings = Mappings { mappings_sort :: [(String, String)]
+                         , mappings_functions :: [(String, String)]
+                         }
+
+instance Show Mappings where
+    show (Mappings mappings_sort mappings_functions) = 
+        "Sorts:\n" ++ concatMap ((++ "\n") . showTuple) mappings_sort ++ "\n" ++
+        "Functions:\n" ++ concatMap ((++ "\n") . showTuple) mappings_functions
+            where showTuple (v1, v2) = show (drop 4 v1) ++ " -> " ++ show (drop 4 v2)
+
+duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO (Maybe Mappings)
 duplicate tool (system1, type_classes1) (system2, type_classes2) = do
     if length (functions system1) /= length (functions system2) ||
        length (sorts system1) /= length (sorts system2) || 
        length (rules system1) /= length (rules system2) ||
        length type_classes1 /= length type_classes2
-    then return False else do
+    then return Nothing else do
 
     case groupTypeClasses type_classes1 type_classes2 of
-        Nothing -> return False -- some type_class in first system does not match any other type_class in the other system
+        Nothing -> return Nothing -- some type_class in first system does not match any other type_class in the other system
         Just function_groups -> do 
-            let commands = sortSmt (sorts system1) (sorts system2) 
-                           ++ functionsSmt function_groups 
-                           ++ [rulesSmt (rules system1) (rules system2)]
-            -- putStr $ Smt.showSmtInput commands
-            Smt.check_sat tool commands
+            let formula = Smt.conj [ sortSmt (sorts system1) (sorts system2) 
+                                   , functionsDistinct var1 $ functions system1
+                                   , functionsDistinct var2 $ functions system2
+                                   , functionsSmt function_groups 
+                                   , rulesSmt (rules system1) (rules system2)
+                                   ]
+            smt_model <- Smt.sat tool formula
+            return $ modelToMappings smt_model
+
+modelToMappings :: Smt.SMTOutput -> Maybe Mappings
+modelToMappings Nothing = Nothing
+modelToMappings (Just model) = Just $ Mappings mappings_sort mappings_functions
+    where 
+        isSortVar :: String -> Bool 
+        isSortVar (_ : '_' : 's' : _) = True 
+        isSortVar (_ : '_' : 'f' : _) = False 
+        isSortVar _ = error "Unknown variable name" 
+
+        (sort_vars, function_vars) = partition (isSortVar . fst) model 
+
+        extractPairs :: [(String, Int)] -> [(String, String)]
+        extractPairs vars = 
+            let sortedVars = sortOn snd vars
+                groupedVars = groupBy ((==) `on` snd) sortedVars
+            in [ (name1, name2) | [(name1, _), (name2, _)] <- groupedVars ]
+
+        mappings_sort = extractPairs sort_vars
+        mappings_functions = extractPairs function_vars
 
 removeUnused :: HOLSystem -> HOLSystem
 removeUnused (HOLSystem {sorts=_sorts, functions=_functions, rules=_rules, file_name=_file_name}) =
@@ -510,37 +544,30 @@ var2 id typ = "y_" ++ typ ++ "_" ++ show id
 sortEq :: Sort -> Sort -> Smt.Formula
 sortEq (Sort id1) (Sort id2) = Smt.Eq (Smt.Var $ var1 id1 "s") (Smt.Var $ var2 id2 "s")
 
-sortSmt :: [Sort] -> [Sort] -> [Smt.Command]
-sortSmt sorts1 sorts2 = declarations1 ++ declarations2 ++ [distinct_sorts1, distinct_sorts2, one_match]
+sortSmt :: [Sort] -> [Sort] -> Smt.Formula
+sortSmt sorts1 sorts2 = Smt.conj [distinct_sorts1, distinct_sorts2, one_match]
   where
-    declarations1 = [ Smt.DeclareInt $ var1 id "s" | Sort id <- sorts1 ]
-    declarations2 = [ Smt.DeclareInt $ var2 id "s" | Sort id <- sorts2 ]
-    
-    distinct_sorts1 = Smt.Assert $ Smt.Distinct [Smt.Var $ var1 id "s" | Sort id <- sorts1]
-    distinct_sorts2 = Smt.Assert $ Smt.Distinct [Smt.Var $ var2 id "s" | Sort id <- sorts2]
+    distinct_sorts1 = Smt.Distinct [Smt.Var $ var1 id "s" | Sort id <- sorts1]
+    distinct_sorts2 = Smt.Distinct [Smt.Var $ var2 id "s" | Sort id <- sorts2]
 
-    one_match = Smt.Assert $ 
-        Smt.conj [ Smt.disj [ sortEq sort1 sort2 | sort2 <- sorts2 ]
-                 | sort1 <- sorts1
-                 ]
-functionsSmt :: [([Var],[Var])] -> [Smt.Command]
-functionsSmt [] = []
-functionsSmt ((funs1, funs2):rest) = declerations1 ++ declerations2 ++ [distinct_funs1, distinct_funs2, one_match] ++ functionsSmt rest
+    one_match = Smt.conj [ Smt.disj [ sortEq sort1 sort2 | sort2 <- sorts2 ]
+                         | sort1 <- sorts1
+                         ]
+
+functionsDistinct :: (Id -> String -> String) -> [Var] -> Smt.Formula
+functionsDistinct var functions = Smt.Distinct [Smt.Var $ var id "f" | Var id _ <- functions]
+ 
+functionsSmt :: [([Var],[Var])] -> Smt.Formula
+functionsSmt [] = Smt.top
+functionsSmt ((funs1, funs2):rest) = Smt.conj [one_match, functionsSmt rest]
   where
-    declerations1 = [ Smt.DeclareInt $ var1 id "f" | Var id _ <- funs1]
-    declerations2 = [ Smt.DeclareInt $ var2 id "f" | Var id _ <- funs2]
-    
-    distinct_funs1 = Smt.Assert $ Smt.Distinct [Smt.Var $ var1 id "f" | Var id _ <- funs1]
-    distinct_funs2 = Smt.Assert $ Smt.Distinct [Smt.Var $ var2 id "f" | Var id _ <- funs2]
-
     functionEq :: Var -> Var -> Smt.Formula
     functionEq (Var id1 typ1) (Var id2 typ2) = Smt.conj $
         Smt.Eq (Smt.Var $ var1 id1 "f") (Smt.Var $ var2 id2 "f") : zipWith sortEq (typeFlatten typ1) (typeFlatten typ2) 
 
-    one_match = Smt.Assert $
-        Smt.conj [Smt.disj [ functionEq fun1 fun2 | fun2 <- funs2 ] 
-                 | fun1 <- funs1
-                 ]
+    one_match = Smt.conj [Smt.disj [ functionEq fun1 fun2 | fun2 <- funs2 ] 
+                         | fun1 <- funs1
+                         ]
 
 isVariable :: Id -> Bool
 isVariable id
@@ -558,10 +585,10 @@ termsEq (Term tid1 args1) (Term tid2 args2)
 termsEq (TermLambda _ body1) (TermLambda _ body2) = termsEq body1 body2
 termsEq _ _ = Smt.bottom
 
-rulesSmt :: [Rule] -> [Rule] -> Smt.Command
-rulesSmt rules1 rules2 = Smt.Assert $ Smt.conj [ 
-                                        Smt.disj [
-                                            Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
-                                            | Rule lhs2 rhs2 <- rules2 ] 
-                                        | Rule lhs1 rhs1 <- rules1 ] 
+rulesSmt :: [Rule] -> [Rule] -> Smt.Formula
+rulesSmt rules1 rules2 = Smt.conj [ Smt.disj [ Smt.conj [ termsEq lhs1 lhs2, termsEq rhs1 rhs2 ] 
+                                             | Rule lhs2 rhs2 <- rules2 
+                                             ] 
+                                  | Rule lhs1 rhs1 <- rules1 
+                                  ] 
 

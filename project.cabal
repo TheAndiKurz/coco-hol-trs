@@ -15,7 +15,7 @@ library core-lib
                         TRS
     other-modules:      Utils
                         SMT
-    build-depends: mtl, containers, process
+    build-depends: mtl, containers, process, parsec
 
 executable flaging
     import:             shared-properties
