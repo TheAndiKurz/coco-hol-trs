@@ -10,7 +10,11 @@ main :: IO ()
 main = do
     cmd_args <- getArgs
     let unique_args = nub cmd_args
-    parse_result <- mapM parseSystemFromFile unique_args
+
+    let verbose = "-v" `elem` unique_args
+    let file_args = filter (/= "-v") unique_args
+
+    parse_result <- mapM parseSystemFromFile file_args
 
     let (errs, systems) = partitionEithers parse_result
     if not $ null errs then mapM_ (putStrLn . show) errs else do
@@ -26,9 +30,13 @@ main = do
 
     let duplicate_systems_file_names = map (\(((s1,_), (s2,_)), model) -> (file_name s1, file_name s2, model)) duplicate_systems
 
-    mapM_ (putStrLn . (\(fn1, fn2, model) -> fn1 ++ " =?= " ++ fn2 ++ "\n\n" ++ show model ++ "\n\n")) duplicate_systems_file_names
+    mapM_ (printDuplicateSystem verbose) duplicate_systems_file_names
     return ()
 
+
+printDuplicateSystem :: Bool -> (String, String, Mappings) -> IO ()
+printDuplicateSystem True (fn1, fn2, model) = putStrLn $ (yellow $ fn1 ++ " == " ++ fn2) ++ "\n" ++ show model ++ "\n"  
+printDuplicateSystem False (fn1, fn2, _) = putStrLn $ fn1 ++ " == " ++ fn2
 
 red :: String -> String
 red s = "\ESC[31m" ++ s ++ "\ESC[0m"
