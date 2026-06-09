@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternGuards      #-}
+
 module SMT where
 
 import System.Process

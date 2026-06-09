@@ -2,17 +2,9 @@
 
 module Main where
 
-import TRS
+import HRS (checkSystem)
 import Parser
 import System.Environment
-
-flagsShow :: Flags -> String
-flagsShow (Flags {second_order=so, pattern=prs, left_linear=ll, deterministic_pattern=dprs}) = 
-    unwords $ "HRS" : [name | (True, name) <- [ (dprs, "DPRS")
-                                              , (prs, "PRS")
-                                              , (ll, "left-linear")
-                                              , (so, "second-order") 
-                                              ]]
 
 condPrint :: Bool -> String -> IO ()
 condPrint False _ = return ()
@@ -29,7 +21,7 @@ flagAri verbose file_name = do
             case checkSystem system of 
                 Left fail_msg -> putStrLn $ red fail_msg
                 Right (flags, unused_globals) -> do
-                    putStrLn $ flagsShow flags
+                    putStrLn $ show flags
                     if verbose && length unused_globals > 0 then do
                         putStrLn $ yellow $ "Unused global variables detected:"
                         mapM_ (putStrLn . yellow . ("  " ++) . show) unused_globals

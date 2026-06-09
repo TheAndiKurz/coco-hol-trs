@@ -1,6 +1,6 @@
 module Main where
 
-import TRS
+import HRS
 import Parser
 import System.Environment (getArgs)
 import Data.List (nub, tails)

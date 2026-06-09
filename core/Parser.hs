@@ -6,7 +6,7 @@ module Parser where
 
 import Control.Applicative
 import Data.Char (isSpace)
-import TRS
+import HRS
 
 data Input = Input
     { inputLine :: Integer

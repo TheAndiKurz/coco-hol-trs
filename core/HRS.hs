@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE DoAndIfThenElse      #-}
 
-module TRS where
+module HRS where
 import Data.List (nub, sort, partition, groupBy, sortOn)
 import Data.Foldable (find)
 import Control.Monad (zipWithM, foldM)
@@ -63,7 +63,16 @@ data Flags = Flags
   , second_order :: Second_Order
   , deterministic_pattern :: Deterministic_Pattern
   , pattern :: Pattern
-  } deriving Show
+  }
+
+instance Show Flags where
+    show (Flags {second_order=so, pattern=prs, left_linear=ll, deterministic_pattern=dprs}) = 
+        unwords $ "HRS" : [name | (True, name) <- [ (dprs, "DPRS")
+                                                  , (prs, "PRS")
+                                                  , (ll, "left-linear")
+                                                  , (so, "second-order") 
+                                                  ]]
+
 
 instance Eq Var where
     (Var id1 _) == (Var id2 _) = id1 == id2

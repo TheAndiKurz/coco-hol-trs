@@ -12,7 +12,7 @@ library core-lib
     import:             shared-properties
     hs-source-dirs:     core
     exposed-modules:    Parser
-                        TRS
+                        HRS
     other-modules:      Utils
                         SMT
     build-depends: mtl, containers, process, parsec
