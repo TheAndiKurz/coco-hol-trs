@@ -26,7 +26,7 @@ main = do
                        , s2 <- rest 
                        ]
     duplicate_results <- mapM (\s -> (,) s <$> uncurry (duplicate "z3") s) system_pairs
-    let duplicate_systems = [ (pair, model) | (pair, Just model) <- duplicate_results ]
+    let duplicate_systems = [ (pair, mappings) | (pair, Just mappings) <- duplicate_results ]
 
     let duplicate_systems_file_names = map (\(((s1,_), (s2,_)), model) -> (file_name s1, file_name s2, model)) duplicate_systems
 
@@ -35,7 +35,7 @@ main = do
 
 
 printDuplicateSystem :: Bool -> (String, String, Mappings) -> IO ()
-printDuplicateSystem True (fn1, fn2, model) = putStrLn $ (yellow $ fn1 ++ " == " ++ fn2) ++ "\n" ++ show model ++ "\n"  
+printDuplicateSystem True (fn1, fn2, mappings) = putStrLn $ (yellow $ fn1 ++ " == " ++ fn2) ++ "\n" ++ show mappings ++ "\n"  
 printDuplicateSystem False (fn1, fn2, _) = putStrLn $ fn1 ++ " == " ++ fn2
 
 red :: String -> String

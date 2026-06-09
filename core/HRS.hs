@@ -385,7 +385,7 @@ instance Show Mappings where
     show (Mappings mappings_sort mappings_functions) = 
         "Sorts:\n" ++ concatMap ((++ "\n") . showTuple) mappings_sort ++ "\n" ++
         "Functions:\n" ++ concatMap ((++ "\n") . showTuple) mappings_functions
-            where showTuple (v1, v2) = show (drop 4 v1) ++ " -> " ++ show (drop 4 v2)
+            where showTuple (v1, v2) = drop 4 v1 ++ " -> " ++ drop 4 v2
 
 duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO (Maybe Mappings)
 duplicate tool (system1, type_classes1) (system2, type_classes2) = do
