@@ -244,9 +244,7 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) 
           then
             Left $ "term '" ++ show term ++ "' does have expected type (" ++ show typ ++ "), but it is not in expanded eta long normal form and therefore rejected."
           else Left $ "term '" ++ show term ++ "' has type " ++ show ft ++ " which is not the expected type " ++ show typ ++ " and it is not in eta normal form."
-  -- free variable type inference
   Nothing | rhs -> Left $ "free variable '" ++ show term ++ "' in right hand side of a rule is not allowed."
-  -- NOTE: remove this case for well-behaved?
   Nothing | not (null targs) -> Left $ "free variable '" ++ show term ++ "' is not in eta long form."
   Nothing -> do
     -- fails if the argument is a free variable again, because this cannot infer the type then
@@ -264,8 +262,8 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) 
           Flags
             { left_linear = True,
               second_order = new_var_order <= 2,
-              deterministic_pattern = checkDeterministicPattern system bound_vars args,
-              pattern = checkPattern bound_vars args
+              deterministic_pattern = isDeterministicPattern system bound_vars args,
+              pattern = isPattern bound_vars args
             }
 
     let flags = foldr flagsCombine base_flags flagss
@@ -323,15 +321,15 @@ typeFlatten (Type [] s) = [Sort s]
 typeFlatten (Type args s) = concatMap typeFlatten args ++ [Sort s]
 
 -- DHS Deterministic higher-order rewrite patterns
-checkDeterministicPattern :: HOLSystem -> [Var] -> [Term] -> Bool
-checkDeterministicPattern system bound_vars args =
+isDeterministicPattern :: HOLSystem -> [Var] -> [Term] -> Bool
+isDeterministicPattern system bound_vars args =
   let defined_ids = map varId $ functions system ++ bound_vars
-      eta_reduces_args = map etaReduce args
+      eta_reduced_args = map etaReduce args
 
       containsBoundVar :: [Id] -> Term -> Bool
       containsBoundVar bound_ids term = any (`isFree` term) bound_ids
 
-      enumerated_args = zip [0 :: Int ..] eta_reduces_args
+      enumerated_args = zip [0 :: Int ..] eta_reduced_args
 
       term_pairs :: [(Term, Term)]
       term_pairs =
@@ -355,23 +353,23 @@ checkDeterministicPattern system bound_vars args =
       isLambda (TermLambda _ _) = True
       isLambda _ = False
    in -- every arg has at least one bound var
-      all (containsBoundVar (map varId bound_vars)) eta_reduces_args
+      all (containsBoundVar (map varId bound_vars)) eta_reduced_args
         -- all vars are bound by either variable of function symbol
-        && not (any (hasFree defined_ids) eta_reduces_args)
+        && not (any (hasFree defined_ids) eta_reduced_args)
         -- all terms need to be expanded or rather no term can be a lambda after eta reduction
-        && not (any isLambda eta_reduces_args)
+        && not (any isLambda eta_reduced_args)
         && not (any (uncurry subtermRelation) term_pairs)
 
 -- PRS pattern rewrite system
-checkPattern :: [Var] -> [Term] -> Bool
-checkPattern bound_vars args =
-  let eta_reduces_args = map etaReduce args
-
-      termSuitableForPattern :: Term -> Bool
-      termSuitableForPattern (Term tid []) = elem tid (map varId bound_vars)
-      termSuitableForPattern _ = False
-   in all termSuitableForPattern eta_reduces_args
-        && length eta_reduces_args == length (nub eta_reduces_args)
+isPattern :: [Var] -> [Term] -> Bool
+isPattern bound_vars args =
+  all suitablePattern eta_reduced_args
+    && length eta_reduced_args == length (nub eta_reduced_args)
+  where
+    eta_reduced_args = map etaReduce args
+    suitablePattern :: Term -> Bool
+    suitablePattern (Term tid []) = tid `elem` map varId bound_vars
+    suitablePattern _ = False
 
 etaReduce :: Term -> Term
 etaReduce (TermLambda vars1 (TermLambda vars2 t)) = etaReduce (TermLambda (vars1 ++ vars2) t)
