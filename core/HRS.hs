@@ -343,8 +343,8 @@ isDeterministicPattern system bound_vars args =
       subtermRelation term1 term2
         | term1 == term2 = True
         | otherwise = case term2 of
-            (Term _ []) -> False
-            (Term term_id term_args) ->
+            Term _ [] -> False
+            Term term_id term_args ->
               subtermRelation term1 (last term_args)
                 || subtermRelation term1 (Term term_id $ init term_args)
             _ -> False
