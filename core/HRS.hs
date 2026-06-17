@@ -396,7 +396,7 @@ hasFree ids (TermLambda new_vars body) = hasFree (ids ++ map varId new_vars) bod
 -- duplicate checking
 preProcessSystemDuplicates :: HOLSystem -> (HOLSystem, [[Var]])
 preProcessSystemDuplicates system =
-  let system' = alphaNormalizeRules $ removeUnused system
+  let system' = removeDuplicateRules $ rulesCanonicalRename system
    in (system', varsDevideIntoTypeClasses $ functions system')
 
 data Mappings = Mappings
@@ -456,23 +456,21 @@ modelToMappings (Just model) = Just $ Mappings mappings_sort mappings_functions
     mappings_sort = extractPairs sort_vars
     mappings_functions = extractPairs function_vars
 
-removeUnused :: HOLSystem -> HOLSystem
-removeUnused (HOLSystem {sorts = _sorts, functions = _functions, rules = _rules, file_name = _file_name}) =
-  let filtered_functions = [function | function <- _functions, any (varUsedInRule function) _rules]
-      filtered_sorts = [sort | sort <- _sorts, any (sortUsedInType sort . varType) filtered_functions]
-   in HOLSystem
-        { sorts = filtered_sorts,
-          functions = filtered_functions,
-          rules = nub _rules,
-          file_name = _file_name
-        }
-
-alphaNormalizeRules :: HOLSystem -> HOLSystem
-alphaNormalizeRules HOLSystem {sorts = _sorts, functions = _functions, rules = _rules, file_name = _file_name} =
+removeDuplicateRules :: HOLSystem -> HOLSystem
+removeDuplicateRules (HOLSystem {sorts = _sorts, functions = _functions, rules = _rules, file_name = _file_name}) =
   HOLSystem
     { sorts = _sorts,
       functions = _functions,
-      rules = map (alphaNormalizeRule (\id -> id `notElem` map varId _functions)) _rules,
+      rules = nub _rules,
+      file_name = _file_name
+    }
+
+rulesCanonicalRename :: HOLSystem -> HOLSystem
+rulesCanonicalRename HOLSystem {sorts = _sorts, functions = _functions, rules = _rules, file_name = _file_name} =
+  HOLSystem
+    { sorts = _sorts,
+      functions = _functions,
+      rules = map (ruleCanonicalRename (\id -> id `notElem` map varId _functions)) _rules,
       file_name = _file_name
     }
 
@@ -485,8 +483,8 @@ data RenameState = RenameState
 -- renames free variables to (x_i) and bound variables to (z_i)
 -- including the "()" into this, because parsing this is not allowed and
 -- checking if it is a variable later is therefore trivial
-alphaNormalizeRule :: (Id -> Bool) -> Rule -> Rule
-alphaNormalizeRule isVar (Rule lhs rhs) =
+ruleCanonicalRename :: (Id -> Bool) -> Rule -> Rule
+ruleCanonicalRename isVar (Rule lhs rhs) =
   evalState
     ( do
         lhs' <- renameTerm isVar Map.empty lhs
