@@ -17,10 +17,10 @@ library core-lib
                         SMT
     build-depends: mtl, containers, process, parsec
 
-executable flaging
+executable tagging
     import:             shared-properties
     main-is:            Main.hs
-    hs-source-dirs:     flaging
+    hs-source-dirs:     tagging
     build-depends:      core-lib
 
 executable duplicate-checker
