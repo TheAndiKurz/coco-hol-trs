@@ -1,0 +1,12 @@
+(format HRS)
+(sort expr)
+(fun eval (-> expr expr expr))
+(fun lam (-> (-> expr expr) expr))
+(rule
+  (lam (lambda ((v expr)) (eval Arg v)))
+  Arg
+)
+(rule
+  (eval (lam (lambda ((y expr)) (B y))) A)
+  A
+)

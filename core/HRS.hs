@@ -615,6 +615,7 @@ isVariable id
 
 termsEq :: Term -> Term -> Smt.Formula
 termsEq (Term tid1 args1) (Term tid2 args2)
+  | length args1 /= length args2 = Smt.bottom
   | isVariable tid1 && isVariable tid2 = Smt.conj argsEq
   | not (isVariable tid1 || isVariable tid2) = Smt.conj $ funEq : argsEq
   | otherwise = Smt.bottom
