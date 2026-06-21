@@ -5,7 +5,7 @@
 (fun unit expr)
 (rule
   (lam (lambda ((v expr)) (eval Arg v)))
-  Arg
+  unit
 )
 (rule
   (eval (lam (lambda ((y expr)) (B y))) A)
