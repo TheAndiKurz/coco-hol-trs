@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 {- HLINT ignore "Use newtype instead of data" -}
-
 {- HLINT ignore "Use camelCase" -}
 
 module HRS where
@@ -340,14 +339,13 @@ isDeterministicPattern system bound_vars args =
         ]
 
       subtermRelation :: Term -> Term -> Bool
-      subtermRelation term1 term2
-        | term1 == term2 = True
-        | otherwise = case term2 of
-            Term _ [] -> False
-            Term term_id term_args ->
-              subtermRelation term1 (last term_args)
-                || subtermRelation term1 (Term term_id $ init term_args)
-            _ -> False
+      subtermRelation term1 term2 =
+        term1 == term2 || case term2 of
+          Term _ [] -> False
+          Term term_id term_args ->
+            subtermRelation term1 (last term_args)
+              || subtermRelation term1 (Term term_id $ init term_args)
+          _ -> False
 
       isLambda :: Term -> Bool
       isLambda (TermLambda _ _) = True
