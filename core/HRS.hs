@@ -412,16 +412,18 @@ instance Show Mappings where
     where
       showTuple (v1, v2) = drop 4 v1 ++ " -> " ++ drop 4 v2
 
-duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO (Maybe Mappings)
+data Duplicate_Checker_Result = TrivialFail | TypeMappingFail | SMTFail | Success Mappings
+
+duplicate :: String -> (HOLSystem, [[Var]]) -> (HOLSystem, [[Var]]) -> IO Duplicate_Checker_Result
 duplicate tool (system1, type_classes1) (system2, type_classes2) =
   if length (functions system1) /= length (functions system2)
     || length (sorts system1) /= length (sorts system2)
     || length (rules system1) /= length (rules system2)
     || length type_classes1 /= length type_classes2
-    then return Nothing
+    then return TrivialFail
     else do
       case groupTypeClasses type_classes1 type_classes2 of
-        Nothing -> return Nothing -- some type_class in first system does not match any other type_class in the other system
+        Nothing -> return TypeMappingFail -- some type_class in first system does not match any other type_class in the other system
         Just function_groups -> do
           let formula =
                 Smt.conj
@@ -434,9 +436,9 @@ duplicate tool (system1, type_classes1) (system2, type_classes2) =
           smt_model <- Smt.sat tool formula
           return $ modelToMappings smt_model
 
-modelToMappings :: Smt.SMTOutput -> Maybe Mappings
-modelToMappings Nothing = Nothing
-modelToMappings (Just model) = Just $ Mappings mappings_sort mappings_functions
+modelToMappings :: Smt.SMTOutput -> Duplicate_Checker_Result
+modelToMappings Nothing = SMTFail
+modelToMappings (Just model) = Success $ Mappings mappings_sort mappings_functions
   where
     isSortVar :: String -> Bool
     isSortVar (_ : '_' : 's' : _) = True
