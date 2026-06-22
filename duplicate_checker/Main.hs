@@ -57,7 +57,6 @@ printStatistics results = do
   putStrLn $ "Duplicates:          " ++ show duplicates
   putStrLn "===================================="
   where
-    -- Accumulator tuple: (TrivialFail, TypeMappingFail, SMTFail, Success)
     tally :: (Int, Int, Int, Int) -> Duplicate_Checker_Result -> (Int, Int, Int, Int)
     tally (t, tm, s, suc) TrivialFail = (t + 1, tm, s, suc)
     tally (t, tm, s, suc) TypeMappingFail = (t, tm + 1, s, suc)
