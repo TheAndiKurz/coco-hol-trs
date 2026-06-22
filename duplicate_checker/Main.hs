@@ -44,10 +44,6 @@ printDuplicateSystem False (fn1, fn2, _) = putStrLn $ fn1 ++ " == " ++ fn2
 
 printStatistics :: [Duplicate_Checker_Result] -> IO ()
 printStatistics results = do
-  let (trivial, typeMapping, smt_fails, duplicates) = foldl tally (0, 0, 0, 0) results
-      smt_calls = smt_fails + duplicates
-      total = trivial + typeMapping + smt_fails + duplicates
-
   putStrLn "=== Duplicate Checker Statistics ==="
   putStrLn $ "Total Checks:        " ++ show total
   putStrLn $ "Trivial Fails:       " ++ show trivial
@@ -62,6 +58,10 @@ printStatistics results = do
     tally (t, tm, s, suc) TypeMappingFail = (t, tm + 1, s, suc)
     tally (t, tm, s, suc) SMTFail = (t, tm, s + 1, suc)
     tally (t, tm, s, suc) (Success _) = (t, tm, s, suc + 1)
+
+    (trivial, typeMapping, smt_fails, duplicates) = foldl tally (0, 0, 0, 0) results
+    smt_calls = smt_fails + duplicates
+    total = trivial + typeMapping + smt_fails + duplicates
 
 red :: String -> String
 red s = "\ESC[31m" ++ s ++ "\ESC[0m"
