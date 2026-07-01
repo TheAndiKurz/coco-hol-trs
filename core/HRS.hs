@@ -69,15 +69,15 @@ type Pattern = Bool
 
 type Deterministic_Pattern = Bool
 
-data Flags = Flags
+data Tags = Tags
   { left_linear :: Left_Linear,
     second_order :: Second_Order,
     deterministic_pattern :: Deterministic_Pattern,
     pattern :: Pattern
   }
 
-instance Show Flags where
-  show (Flags {second_order = so, pattern = prs, left_linear = ll, deterministic_pattern = dprs}) =
+instance Show Tags where
+  show (Tags {second_order = so, pattern = prs, left_linear = ll, deterministic_pattern = dprs}) =
     unwords $
       "HRS"
         : [ name
@@ -95,11 +95,8 @@ instance Eq Var where
 instance Ord Var where
   compare (Var id1 _) (Var id2 _) = compare id1 id2
 
-flagsCombine :: Flags -> Flags -> Flags
-flagsCombine (Flags ll1 so1 dhs1 prs1) (Flags ll2 so2 dhs2 prs2) = Flags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
-
-flagsNotLeftLinear :: Flags
-flagsNotLeftLinear = Flags {left_linear = False, second_order = True, deterministic_pattern = True, pattern = True}
+tagsCombine :: Tags -> Tags -> Tags
+tagsCombine (Tags ll1 so1 dhs1 prs1) (Tags ll2 so2 dhs2 prs2) = Tags (ll1 && ll2) (so1 && so2) (dhs1 && dhs2) (prs1 && prs2)
 
 sortId :: Sort -> Id
 sortId (Sort id) = id
@@ -113,43 +110,43 @@ varType (Var _ t) = t
 typeArgs :: Type -> [Type]
 typeArgs (Type args _) = args
 
-checkSystem :: HOLSystem -> Either String (Flags, [Var])
+checkSystem :: HOLSystem -> Either String (Tags, [Var])
 checkSystem system = do
-  flags <- checkSorts system
-  flags' <- checkFunctions system
-  flags'' <- checkRules system
+  tags <- checkSorts system
+  tags' <- checkFunctions system
+  tags'' <- checkRules system
   Right
-    ( flagsCombine flags $ flagsCombine flags' flags'',
+    ( tagsCombine tags $ tagsCombine tags' tags'',
       filter (not . \var -> any (varUsedInRule var) (rules system)) (functions system)
     )
 
-checkSorts :: HOLSystem -> Either String Flags
+checkSorts :: HOLSystem -> Either String Tags
 checkSorts system = case firstDuplicate (sorts system) of
-  Nothing -> Right $ Flags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True}
+  Nothing -> Right $ Tags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True}
   Just (Sort id) -> Left $ "duplicate sort name: " ++ show id
 
-checkFunctions :: HOLSystem -> Either String Flags
+checkFunctions :: HOLSystem -> Either String Tags
 checkFunctions system = do
   duplicateVarsCheck "function" $ functions system
   let max_order = maximum $ map (typeOrder . varType) $ functions system
-  return $ Flags {left_linear = True, second_order = max_order <= 3, deterministic_pattern = True, pattern = True}
+  return $ Tags {left_linear = True, second_order = max_order <= 3, deterministic_pattern = True, pattern = True}
 
-checkRules :: HOLSystem -> Either String Flags
+checkRules :: HOLSystem -> Either String Tags
 checkRules system = do
-  flags <- mapM (checkRule system) $ rules system
-  return $ foldr flagsCombine (Flags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True}) flags
+  tags <- mapM (checkRule system) $ rules system
+  return $ foldr tagsCombine (Tags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True}) tags
 
-checkRule :: HOLSystem -> Rule -> Either String Flags
+checkRule :: HOLSystem -> Rule -> Either String Tags
 checkRule _ rule@(Rule (TermLambda _ _) _) =
   Left $
     "rule '" ++ show rule ++ "' has a lambda term in left-hand side"
 checkRule system (Rule ruleLeft ruleRight) = do
   typ@(Type _ _) <- getTermType system (functions system) ruleLeft
-  (freeVarsL, flags) <- typeCheckWithFreeVariables system False [] [] ruleLeft typ
-  (freeVarsL, flags') <- checkFreeVars freeVarsL
-  (freeVarsR, flags'') <- typeCheckWithFreeVariables system True freeVarsL [] ruleRight typ
+  (freeVarsL, tags) <- typeCheckWithFreeVariables system False [] [] ruleLeft typ
+  (freeVarsL, tags') <- checkFreeVars freeVarsL
+  (freeVarsR, tags'') <- typeCheckWithFreeVariables system True freeVarsL [] ruleRight typ
   if null freeVarsR
-    then return $ foldl flagsCombine flags [flags', flags'']
+    then return $ foldl tagsCombine tags [tags', tags'']
     else
       Left $
         "rule '"
@@ -157,10 +154,10 @@ checkRule system (Rule ruleLeft ruleRight) = do
           ++ "' has free variables in right hand side that do not appear in left-hand side: "
           ++ show freeVarsR
 
-checkFreeVars :: [Var] -> Either String ([Var], Flags)
+checkFreeVars :: [Var] -> Either String ([Var], Tags)
 checkFreeVars vars = do
   (vars, left_linear, order) <- check $ sort vars
-  return (vars, Flags {left_linear = left_linear, second_order = order <= 2, deterministic_pattern = True, pattern = True})
+  return (vars, Tags {left_linear = left_linear, second_order = order <= 2, deterministic_pattern = True, pattern = True})
   where
     check :: [Var] -> Either String ([Var], Left_Linear, Order)
     check (v1@(Var _ typ) : v2 : vs)
@@ -221,7 +218,7 @@ getTermTypeFreeVariableError term =
 
 -- expect a type for a term to typecheck the term.
 -- On success returns free variables with inferred type
-typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> [Var] -> Term -> Type -> Either String ([Var], Flags)
+typeCheckWithFreeVariables :: HOLSystem -> Bool -> [Var] -> [Var] -> Term -> Type -> Either String ([Var], Tags)
 typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) typ@(Type targs tid) = case findVar (bound_vars ++ functions system) fid of
   -- function application type checking
   Just (Var _ (Type fargs ftid)) | length fargs == length args -> do
@@ -230,13 +227,13 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) 
       else
         foldM
           f
-          ([], Flags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True})
+          ([], Tags {left_linear = True, second_order = True, deterministic_pattern = True, pattern = True})
           (zip args fargs)
     where
-      f :: ([Var], Flags) -> (Term, Type) -> Either String ([Var], Flags)
-      f (new_free_vars_acc, flags) (term, typ) = do
-        (new_free_vars, new_flags) <- typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ new_free_vars_acc) term typ
-        return (new_free_vars_acc ++ new_free_vars, flagsCombine flags new_flags)
+      f :: ([Var], Tags) -> (Term, Type) -> Either String ([Var], Tags)
+      f (new_free_vars_acc, tags) (term, typ) = do
+        (new_free_vars, new_tags) <- typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ new_free_vars_acc) term typ
+        return (new_free_vars_acc ++ new_free_vars, tagsCombine tags new_tags)
   Just (Var _ ft@(Type fargs _))
     | length fargs == length args + length targs ->
         if ft == typ
@@ -254,19 +251,19 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars term@(Term fid args) 
     let new_var_order = typeOrder new_var_type
     let new_var = Var fid new_var_type
 
-    (varss, flagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ [new_var])) args term_types
+    (varss, tagss) <- unzip <$> zipWithM (typeCheckWithFreeVariables system rhs bound_vars (free_vars ++ [new_var])) args term_types
     let free_vars = concat varss
 
-    let base_flags =
-          Flags
+    let base_tags =
+          Tags
             { left_linear = True,
               second_order = new_var_order <= 2,
               deterministic_pattern = isDeterministicPattern system bound_vars args,
               pattern = isPattern bound_vars args
             }
 
-    let flags = foldr flagsCombine base_flags flagss
-    Right (new_var : free_vars, flags)
+    let tags = foldr tagsCombine base_tags tagss
+    Right (new_var : free_vars, tags)
   _ -> Left ("term '" ++ show term ++ "' does not have type " ++ show typ)
 typeCheckWithFreeVariables system rhs bound_vars free_vars (TermLambda new_bound_vars body) (Type targs tid)
   | length new_bound_vars > length targs =
@@ -280,13 +277,13 @@ typeCheckWithFreeVariables system rhs bound_vars free_vars (TermLambda new_bound
       duplicateVarsCheck "lambda function variable" new_bound_vars
 
       let max_order = maximum $ map (typeOrder . varType) new_bound_vars
-      let base_flags = Flags {left_linear = True, second_order = max_order <= 1, deterministic_pattern = True, pattern = True}
+      let base_tags = Tags {left_linear = True, second_order = max_order <= 1, deterministic_pattern = True, pattern = True}
       -- expected type of the body
       let body_type = Type (drop (length new_bound_vars) targs) tid
       if sameTypes (map varType new_bound_vars) (take (length new_bound_vars) targs)
         then do
-          (vars, flags) <- typeCheckWithFreeVariables system rhs (new_bound_vars ++ bound_vars) free_vars body body_type
-          return (vars, flagsCombine flags base_flags)
+          (vars, tags) <- typeCheckWithFreeVariables system rhs (new_bound_vars ++ bound_vars) free_vars body body_type
+          return (vars, tagsCombine tags base_tags)
         else Left ("lambda function with wrong variable types. Expected " ++ show targs ++ " but got " ++ show (map varType new_bound_vars))
 
 duplicateVarsCheck :: String -> [Var] -> Either String ()
